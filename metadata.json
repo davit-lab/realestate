@@ -1,0 +1,6 @@
+{
+  "name": "Adjarahome",
+  "description": "A premium Georgian real estate marketplace application featuring advanced listing search, filters, visual detail screens, and a personalized balance and payment manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
