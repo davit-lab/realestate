@@ -11,7 +11,6 @@ import ProfileView from './components/ProfileView';
 import MessagesDrawer from './components/MessagesDrawer';
 import AddListingModal from './components/AddListingModal';
 import AddProperty from './components/AddProperty';
-import PropertyComparison from './components/PropertyComparison';
 import MapView from './components/MapView';
 import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
@@ -29,6 +28,7 @@ import HotelDetailPage from './components/HotelDetailPage';
 import TourismDetailPage from './components/TourismDetailPage';
 import { useAuth } from './contexts/AuthContext';
 import { useSupabaseListings } from './hooks/useSupabaseListings';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 export default function App() {
   const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
@@ -72,28 +72,10 @@ export default function App() {
     try { const raw = localStorage.getItem('adjarahome_favorites'); return raw ? JSON.parse(raw) : []; }
     catch { return []; }
   });
-  const [compareIds, setCompareIds] = useState<string[]>(() => {
-    try { const raw = localStorage.getItem('adjarahome_compare'); return raw ? JSON.parse(raw) : []; }
-    catch { return []; }
-  });
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
   const [selectedTourismItem, setSelectedTourismItem] = useState<TourismItem | null>(null);
 
-  // Comparison toggle helper
-  const handleCompareToggle = (id: string) => {
-    setCompareIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((compareId) => compareId !== id);
-      } else {
-        if (prev.length >= 4) {
-          alert('შედარებაში შესაძლებელია მაქსიმუმ 4 განცხადების დამატება.');
-          return prev;
-        }
-        return [...prev, id];
-      }
-    });
-  };
 
   // Search and Filter parameters
   const [selectedType, setSelectedType] = useState<ListingType | 'all'>('all');
@@ -148,7 +130,6 @@ export default function App() {
   useEffect(() => { localStorage.setItem('adjarahome_profile', JSON.stringify(userProfile)); }, [userProfile]);
   useEffect(() => { localStorage.setItem('adjarahome_chats', JSON.stringify(chats)); }, [chats]);
   useEffect(() => { localStorage.setItem('adjarahome_favorites', JSON.stringify(favorites)); }, [favorites]);
-  useEffect(() => { localStorage.setItem('adjarahome_compare', JSON.stringify(compareIds)); }, [compareIds]);
 
   // Derived Cities & Districts lists based on uploaded listings
   const citiesList = useMemo(() => {
@@ -202,13 +183,39 @@ export default function App() {
     setTimeout(() => setActiveTab('messages'), 1200);
   };
 
-  // Add new uploaded properties to arrays
-  const handleAddListing = (newListing: Listing) => {
+  // Add new uploaded properties to arrays + Supabase
+  const handleAddListing = async (newListing: Listing) => {
     setListings([newListing, ...listings]);
     setUserProfile((prev) => ({
       ...prev,
       balance: Math.max(0, prev.balance - (newListing.vipStatus === 'super_vip' ? 25 : newListing.vipStatus === 'vip+' ? 10 : 0)),
     }));
+    // Also insert into Supabase
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('properties').insert({
+        title: newListing.title,
+        deal_type: newListing.type,
+        property_type: newListing.condition || 'apartment',
+        location: newListing.location,
+        city: newListing.city,
+        district: newListing.district,
+        rooms: parseInt(newListing.rooms) || null,
+        area_sqm: newListing.area,
+        price: newListing.priceLari,
+        currency: 'GEL',
+        description: newListing.descriptions.ka,
+        phone: newListing.author.phone,
+        images: newListing.images,
+        status: newListing.status,
+        vip_status: newListing.vipStatus,
+        author_name: newListing.author.name,
+        author_avatar: newListing.author.avatar,
+      });
+      if (!error) {
+        // Trigger refresh of dbListings
+        window.dispatchEvent(new CustomEvent('adjarahome:refresh-listings'));
+      }
+    }
   };
 
   // Switch filter elements on clicking specific agents listings
@@ -362,7 +369,6 @@ export default function App() {
         }}
         favoritesCount={favorites.length}
         unreadMessagesCount={chats.length > 0 ? 1 : 0}
-        compareCount={compareIds.length}
         onAddListingClick={() => isAuthenticated ? setActiveTab('add_property') : setShowAuthModal(true)}
         userAvatar={profile?.avatar_url || userProfile.avatar}
         isAuthenticated={isAuthenticated}
@@ -501,6 +507,7 @@ export default function App() {
                     cities={citiesList} districts={districtsList}
                     priceMin={priceMin} setPriceMin={setPriceMin}
                     priceMax={priceMax} setPriceMax={setPriceMax}
+                    selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus}
                   />
                 </div>
 
@@ -589,8 +596,6 @@ export default function App() {
                             onFavoriteToggle={handleFavoriteToggle}
                             currency={currency}
                             exchangeRate={exchangeRate}
-                            isComparing={compareIds.includes(listing.id)}
-                            onCompareToggle={handleCompareToggle}
                             onCardClick={() => { setSelectedListingId(listing.id); setActiveTab('detail'); }}
                           />
                         ))}
@@ -698,8 +703,6 @@ export default function App() {
                     onFavoriteToggle={handleFavoriteToggle}
                     currency={currency}
                     exchangeRate={exchangeRate}
-                    isComparing={compareIds.includes(listing.id)}
-                    onCompareToggle={handleCompareToggle}
                     onCardClick={() => {
                       setSelectedListingId(listing.id);
                       setActiveTab('detail');
@@ -708,28 +711,6 @@ export default function App() {
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Compare listings side-by-side comparison screen */}
-        {activeTab === 'compare' && (
-          <div className="max-w-7xl mx-auto px-4 py-8 font-sans" id="compare-tab-view-container">
-            <PropertyComparison
-              compareIds={compareIds}
-              listings={listings}
-              onRemoveFromCompare={(id) => setCompareIds(compareIds.filter(cid => cid !== id))}
-              onClearCompare={() => setCompareIds([])}
-              currency={currency}
-              onCardClick={(id) => {
-                setSelectedListingId(id);
-                setActiveTab('detail');
-              }}
-              onDirectMessage={(listingId, authorName) => {
-                handleDetailSendMessage(listingId, "გამარჯობა, დაინტერესებული ვარ ამ განცხადებით.");
-                setActiveTab('messages');
-              }}
-              onClose={() => setActiveTab('explore')}
-            />
           </div>
         )}
 

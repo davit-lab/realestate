@@ -24,6 +24,8 @@ interface SidebarFilterProps {
   setPriceMin: (v: string) => void;
   priceMax: string;
   setPriceMax: (v: string) => void;
+  selectedStatus: string;
+  setSelectedStatus: (status: string) => void;
 }
 
 export default function SidebarFilter({
@@ -37,6 +39,7 @@ export default function SidebarFilter({
   cities, districts,
   priceMin, setPriceMin,
   priceMax, setPriceMax,
+  selectedStatus, setSelectedStatus,
 }: SidebarFilterProps) {
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');
@@ -72,12 +75,12 @@ export default function SidebarFilter({
 
   const hasActiveFilters = selectedCity !== 'all' || selectedDistrict !== 'all' ||
     roomFilter !== 'any' || searchArea !== '' || priceMin !== '' || priceMax !== '' ||
-    selectedType !== 'all';
+    selectedType !== 'all' || selectedStatus !== 'all';
 
   const clearAll = () => {
     setSelectedCity('all'); setSelectedDistrict('all'); setRoomFilter('any');
     setSearchArea(''); setSelectedType('all'); setPriceMin(''); setPriceMax('');
-    setLocationSearch(''); setLocationDropdownOpen(false);
+    setSelectedStatus('all'); setLocationSearch(''); setLocationDropdownOpen(false);
   };
 
   const lbl = 'block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5';
@@ -274,6 +277,27 @@ export default function SidebarFilter({
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Building status */}
+          <div>
+            <label className={lbl}>სტატუსი</label>
+            <div className="grid grid-cols-2 gap-1">
+              {[
+                { val: 'all', label: 'ყველა' },
+                { val: 'ახალი აშენებული', label: 'ახალი' },
+                { val: 'ძველი აშენებული', label: 'ძველი' },
+                { val: 'მშენებარე', label: 'მშენებარე' },
+              ].map(({ val, label }) => (
+                <button key={val} onClick={() => setSelectedStatus(val)}
+                  className={`py-[7px] text-[12px] font-medium rounded-lg transition-colors cursor-pointer ${
+                    selectedStatus === val ? 'bg-ss-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

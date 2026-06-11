@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Home, Heart, GitCompare, MessageSquare, Plus, User,
+  Home, Heart, MessageSquare, Plus, User,
   Shield, LogOut, LogIn, Compass, Building2
 } from 'lucide-react';
 import { ActiveTab } from '../types';
@@ -10,7 +10,6 @@ interface HeaderProps {
   setActiveTab: (tab: ActiveTab) => void;
   favoritesCount: number;
   unreadMessagesCount: number;
-  compareCount: number;
   onAddListingClick: () => void;
   userAvatar: string;
   isAuthenticated: boolean;
@@ -24,7 +23,6 @@ export default function Header({
   setActiveTab,
   favoritesCount,
   unreadMessagesCount,
-  compareCount,
   onAddListingClick,
   userAvatar,
   isAuthenticated,
@@ -37,7 +35,6 @@ export default function Header({
     { tab: 'hotels',       label: 'სასტუმრო',      icon: <Building2 size={17} strokeWidth={2} /> },
     { tab: 'tourism',      label: 'ტურიზმი',        icon: <Compass size={17} strokeWidth={2} /> },
     { tab: 'favorites',    label: 'რჩეულები',       icon: <Heart size={17} strokeWidth={2} />, badge: favoritesCount },
-    { tab: 'compare',      label: 'შედარება',        icon: <GitCompare size={17} strokeWidth={2} />, badge: compareCount },
     { tab: 'messages',     label: 'შეტყობინება',     icon: <MessageSquare size={17} strokeWidth={2} />, badge: unreadMessagesCount },
   ];
 

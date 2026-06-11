@@ -27,6 +27,7 @@ interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  generatePasswordResetLink: (email: string) => Promise<{ error: AuthError | null; data?: any }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -165,13 +166,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(s => ({ ...s, profile }));
   }, [state.user, fetchProfile]);
 
+  const generatePasswordResetLink = useCallback(async (email: string) => {
+    if (!isSupabaseConfigured) return { error: { message: 'Supabase not configured', name: 'AuthError', status: 500 } as AuthError };
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/`,
+    });
+    return { data, error };
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       ...state,
       isAuthenticated: !!state.user,
       isAdmin: state.profile?.is_admin ?? false,
       isAgent: state.profile?.is_agent ?? false,
-      signUp, signIn, signOut, refreshProfile,
+      signUp, signIn, signOut, refreshProfile, generatePasswordResetLink,
     }}>
       {children}
     </AuthContext.Provider>

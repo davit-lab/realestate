@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, MapPin, BedDouble, Maximize2, ArrowLeftRight, Eye, Building2 } from 'lucide-react';
+import { Heart, MapPin, BedDouble, Maximize2, Eye, Building2 } from 'lucide-react';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getAgentDiscountedPrice } from '../utils/pricing';
@@ -12,8 +12,6 @@ interface ListingCardProps {
   currency: 'GEL' | 'USD';
   onCardClick: () => void;
   exchangeRate: number;
-  isComparing?: boolean;
-  onCompareToggle?: (id: string) => void;
 }
 
 const TYPE_LABELS: Record<string, { label: string; bg: string; text: string }> = {
@@ -30,8 +28,6 @@ export default function ListingCard({
   onFavoriteToggle,
   currency,
   onCardClick,
-  isComparing = false,
-  onCompareToggle,
 }: ListingCardProps) {
   const { profile } = useAuth();
   const basePrice = currency === 'GEL' ? listing.priceLari : listing.priceUsd;
@@ -85,19 +81,8 @@ export default function ListingCard({
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
-          <button
-            onClick={(e) => { e.stopPropagation(); onCompareToggle?.(listing.id); }}
-            title="შედარება"
-            className={`w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all ${
-              isComparing
-                ? 'bg-ss-primary text-white'
-                : 'bg-white/90 backdrop-blur-sm text-gray-600 hover:bg-white hover:text-gray-900'
-            }`}
-          >
-            <ArrowLeftRight size={13} />
-          </button>
+        {/* Favorite button */}
+        <div className="absolute top-3 right-3">
           <button
             onClick={(e) => onFavoriteToggle(listing.id, e)}
             title="რჩეულებში"

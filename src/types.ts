@@ -61,5 +61,104 @@ export interface PaymentCard {
   colorTheme: 'red-dark' | 'purple-dark' | 'bronze-glow' | 'silver-classic';
 }
 
-export type ActiveTab = 'explore' | 'detail' | 'profile' | 'favorites' | 'messages' | 'compare' | 'add_property' | 'admin' | 'terms' | 'privacy' | 'tourism' | 'hotels' | 'hotel_detail' | 'tourism_detail';
+export type ActiveTab = 'explore' | 'detail' | 'profile' | 'favorites' | 'messages' | 'add_property' | 'admin' | 'terms' | 'privacy' | 'tourism' | 'hotels' | 'hotel_detail' | 'tourism_detail';
 export type ProfileSubTab = 'balance_view' | 'balance_refill' | 'payment_methods' | 'my_listings';
+
+// ── Admin Panel Types ──
+export type AdminSubTab = 'dashboard' | 'listings' | 'users' | 'transactions' | 'packages' | 'chats' | 'support' | 'templates' | 'site';
+
+export type TransactionType = 'refill' | 'deduct' | 'package_purchase' | 'package_refund' | 'listing_fee';
+
+export interface AdminTransaction {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  amount: number;
+  type: TransactionType;
+  description: string;
+  admin_id?: string;
+  created_at: string;
+}
+
+export interface UserPackage {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  package_type: 'vip' | 'vip_plus' | 'super_vip';
+  listings_remaining: number;
+  total_listings: number;
+  assigned_by?: string;
+  expires_at?: string;
+  created_at: string;
+}
+
+export interface SupportTemplate {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  usage_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SiteSetting {
+  key: string;
+  value: string;
+  description: string;
+  updated_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  content: string;
+  is_active: boolean;
+  starts_at?: string;
+  ends_at?: string;
+  created_at: string;
+}
+
+export interface AdminAuditEntry {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_user_id?: string;
+  details: string;
+  created_at: string;
+}
+
+export interface AdminUserExtended {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string;
+  phone: string;
+  balance: number;
+  is_admin: boolean;
+  is_agent: boolean;
+  created_at: string;
+  last_sign_in_at?: string;
+  user_created_at?: string;
+}
+
+export interface AdminChat {
+  id: string;
+  participant_ids: string[];
+  participant_names: string[];
+  last_message: string;
+  last_sent_at: string;
+  unread_count: number;
+  type: 'user_chat' | 'support' | 'ai_chat';
+}
+
+export interface AdminStats {
+  totalListings: number;
+  totalUsers: number;
+  totalBalance: number;
+  recentListings: number;
+  totalRevenue: number;
+  totalTransactions: number;
+  openTickets: number;
+  activePackages: number;
+}

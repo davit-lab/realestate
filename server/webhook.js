@@ -87,7 +87,7 @@ app.post('/webhook/telegram', async (req, res) => {
     const parsed = await parseWithLLM(messageText);
 
     const insertPayload = {
-      agent_id: null,
+      user_id: null,
       property_type: parsed.property_type || 'apartment',
       location: parsed.location || '',
       rooms: parsed.rooms ?? null,
@@ -138,7 +138,7 @@ app.post('/webhook/whatsapp', async (req, res) => {
     const parsed = await parseWithLLM(messageText);
 
     const insertPayload = {
-      agent_id: null,
+      user_id: null,
       property_type: parsed.property_type || 'apartment',
       location: parsed.location || '',
       rooms: parsed.rooms ?? null,
