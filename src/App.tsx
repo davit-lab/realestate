@@ -8,7 +8,7 @@ import SidebarFilter from './components/SidebarFilter';
 import ListingCard from './components/ListingCard';
 import ListingDetail from './components/ListingDetail';
 import ProfileView from './components/ProfileView';
-import MessagesDrawer from './components/MessagesDrawer';
+import ChatCenter from './components/ChatCenter';
 import AddListingModal from './components/AddListingModal';
 import AddProperty from './components/AddProperty';
 import MapView from './components/MapView';
@@ -661,12 +661,7 @@ export default function App() {
 
         {/* Messaging Chat dialogue center Page */}
         {activeTab === 'messages' && (
-          <MessagesDrawer
-            chats={chats}
-            setChats={setChats}
-            activeChatId={activeChatId}
-            setActiveChatId={setActiveChatId}
-          />
+          <ChatCenter />
         )}
 
         {/* Favorites Listings Grid tab */}
