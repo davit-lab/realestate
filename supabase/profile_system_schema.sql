@@ -231,7 +231,7 @@ INSERT INTO storage.buckets (id, name, public)
 DROP POLICY IF EXISTS "verification doc upload" ON storage.objects;
 CREATE POLICY "verification doc upload"
   ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'verification-docs' AND auth.role() = 'authenticated');
+  WITH CHECK (bucket_id = 'verification-docs' AND auth.uid()::text = (storage.foldername(name))[1]);
 
 DROP POLICY IF EXISTS "verification doc owner read" ON storage.objects;
 CREATE POLICY "verification doc owner read"

@@ -27,6 +27,7 @@ import { type TourismItem } from './components/TourismDetailModal';
 import HotelDetailPage from './components/HotelDetailPage';
 import TourismDetailPage from './components/TourismDetailPage';
 import { useAuth } from './contexts/AuthContext';
+import { useFavorites } from './hooks/useFavorites';
 import { useSupabaseListings } from './hooks/useSupabaseListings';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
@@ -68,10 +69,7 @@ export default function App() {
     try { const raw = localStorage.getItem('adjarahome_chats'); return raw ? JSON.parse(raw) : []; }
     catch { return []; }
   });
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try { const raw = localStorage.getItem('adjarahome_favorites'); return raw ? JSON.parse(raw) : []; }
-    catch { return []; }
-  });
+  const { favorites, toggleFavorite } = useFavorites(user?.id);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
   const [selectedTourismItem, setSelectedTourismItem] = useState<TourismItem | null>(null);
@@ -129,7 +127,6 @@ export default function App() {
   useEffect(() => { localStorage.setItem('adjarahome_cards', JSON.stringify(paymentCards)); }, [paymentCards]);
   useEffect(() => { localStorage.setItem('adjarahome_profile', JSON.stringify(userProfile)); }, [userProfile]);
   useEffect(() => { localStorage.setItem('adjarahome_chats', JSON.stringify(chats)); }, [chats]);
-  useEffect(() => { localStorage.setItem('adjarahome_favorites', JSON.stringify(favorites)); }, [favorites]);
 
   // Derived Cities & Districts lists based on uploaded listings
   const citiesList = useMemo(() => {
@@ -147,9 +144,7 @@ export default function App() {
   // Handle favorite clicking
   const handleFavoriteToggle = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // halt bubbling trigger click cards
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id]
-    );
+    void toggleFavorite(id);
   };
 
   // Handle bookings from Hotels/Tourism pages
@@ -212,6 +207,7 @@ export default function App() {
         author_avatar: newListing.author.avatar,
         lat: newListing.lat ?? null,
         lng: newListing.lng ?? null,
+        user_id: user?.id ?? null,
       });
       if (!error) {
         // Trigger refresh of dbListings
@@ -352,8 +348,8 @@ export default function App() {
 
   // User uploaded listings subset helper
   const userListings = useMemo(() => {
-    return userProfile.name ? listings.filter((l) => l.author.name === userProfile.name) : [];
-  }, [listings, userProfile.name]);
+    return user ? listings.filter((l) => l.user_id === user.id) : [];
+  }, [listings, user]);
 
   // Favourited listings subset helper
   const favoritedListingsSubset = useMemo(() => {
@@ -739,7 +735,6 @@ export default function App() {
           <HotelDetailPage
             hotel={selectedHotel}
             onBack={() => setActiveTab('hotels')}
-            onBook={handleBooking}
           />
         )}
 
@@ -753,7 +748,6 @@ export default function App() {
           <TourismDetailPage
             item={selectedTourismItem}
             onBack={() => setActiveTab('tourism')}
-            onBook={handleBooking}
           />
         )}
 

@@ -49,6 +49,7 @@ export interface Listing {
   lat?: number; // Real WGS-84 latitude (from map picker)
   lng?: number; // Real WGS-84 longitude (from map picker)
   viewCount?: number; // Number of unique views
+  user_id?: string; // Auth user id who created the listing
 }
 
 export interface PaymentCard {
@@ -225,4 +226,25 @@ export interface ViewStats {
   todayListingViews: number;
   recentViewers: ProfileViewEntry[];
   activityData: ProfileActivity[];
+}
+
+// ── Booking Types ──
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
+
+export interface Booking {
+  id: string;
+  user_id: string;
+  item_id: string;
+  item_type: 'hotel' | 'tourism';
+  item_name: string;
+  item_image?: string;
+  guest_name: string;
+  email?: string;
+  phone?: string;
+  check_in?: string;
+  check_out?: string;
+  guests: number;
+  details?: string;
+  status: BookingStatus;
+  created_at: string;
 }

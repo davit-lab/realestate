@@ -28,7 +28,7 @@ CREATE POLICY "admin read all tickets" ON public.support_tickets FOR select
 drop policy if exists "auth insert tickets" on public.support_tickets;
 DROP POLICY IF EXISTS "auth insert tickets" ON public.support_tickets;
 CREATE POLICY "auth insert tickets" ON public.support_tickets FOR insert
-  with check (auth.role() = 'authenticated');
+  with check (auth.uid() is not null);
 
 drop policy if exists "admin update tickets" on public.support_tickets;
 DROP POLICY IF EXISTS "admin update tickets" ON public.support_tickets;
@@ -101,7 +101,7 @@ CREATE POLICY "public read comments" ON public.comments FOR select
 drop policy if exists "auth insert comments" on public.comments;
 DROP POLICY IF EXISTS "auth insert comments" ON public.comments;
 CREATE POLICY "auth insert comments" ON public.comments FOR insert
-  with check (auth.role() = 'authenticated');
+  with check (auth.uid() is not null);
 
 drop policy if exists "own update comments" on public.comments;
 DROP POLICY IF EXISTS "own update comments" ON public.comments;
@@ -220,7 +220,7 @@ insert into storage.buckets (id, name, public)
 drop policy if exists "avatar upload" on storage.objects;
 DROP POLICY IF EXISTS "avatar upload" ON storage.objects;
 CREATE POLICY "avatar upload" ON storage.objects FOR insert
-  with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
+  with check (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
 
 drop policy if exists "avatar public read" on storage.objects;
 DROP POLICY IF EXISTS "avatar public read" ON storage.objects;
@@ -236,7 +236,7 @@ CREATE POLICY "avatar owner delete" ON storage.objects FOR delete
 drop policy if exists "property image upload" on storage.objects;
 DROP POLICY IF EXISTS "property image upload" ON storage.objects;
 CREATE POLICY "property image upload" ON storage.objects FOR insert
-  with check (bucket_id = 'property-images' and auth.role() = 'authenticated');
+  with check (bucket_id = 'property-images' and auth.uid()::text = (storage.foldername(name))[1]);
 
 drop policy if exists "property image public read" on storage.objects;
 DROP POLICY IF EXISTS "property image public read" ON storage.objects;
@@ -247,3 +247,39 @@ drop policy if exists "property image owner delete" on storage.objects;
 DROP POLICY IF EXISTS "property image owner delete" ON storage.objects;
 CREATE POLICY "property image owner delete" ON storage.objects FOR delete
   using (bucket_id = 'property-images' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ================================================================
+-- Favorites table
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.favorites (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  property_id   TEXT NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, property_id)
+);
+
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "own favorites read" ON public.favorites;
+CREATE POLICY "own favorites read" ON public.favorites FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own favorites insert" ON public.favorites;
+CREATE POLICY "own favorites insert" ON public.favorites FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own favorites delete" ON public.favorites;
+CREATE POLICY "own favorites delete" ON public.favorites FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Realtime for favorites
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'favorites'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.favorites';
+  END IF;
+END $$;

@@ -4,7 +4,9 @@ import {
   Phone, Users, Calendar, ChevronLeft, ChevronRight, CheckCircle, Heart, Tag,
   Clock, Share2
 } from 'lucide-react';
-import type { Hotel, BookingData } from './HotelDetailModal';
+import type { Hotel } from './HotelDetailModal';
+import { useBookings } from '../hooks/useBookings';
+import { useAuth } from '../contexts/AuthContext';
 
 const AMENITY_MAP: Record<string, { label: string; icon: React.ReactNode }> = {
   wifi:       { label: 'Wi-Fi',          icon: <Wifi size={15} /> },
@@ -31,10 +33,11 @@ function ratingLabel(r: number) {
 interface Props {
   hotel: Hotel;
   onBack: () => void;
-  onBook: (data: BookingData) => void;
 }
 
-export default function HotelDetailPage({ hotel, onBack, onBook }: Props) {
+export default function HotelDetailPage({ hotel, onBack }: Props) {
+  const { user } = useAuth();
+  const { createBooking, loading: bookingLoading } = useBookings(user?.id);
   const [imgIdx, setImgIdx] = useState(0);
   const [roomType, setRoomType] = useState('standard');
   const [checkIn, setCheckIn] = useState('');
@@ -58,12 +61,26 @@ export default function HotelDetailPage({ hotel, onBack, onBook }: Props) {
 
   const totalPrice = nightlyPrice * nights;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) { alert('შეავსეთ სახელი და ელ-ფოსტა'); return; }
-    const details = `🏨 ${hotel.name}\n🛏 ${selectedRoom.label}\n📅 ${checkIn || '—'} → ${checkOut || '—'} (${nights} ღამე)\n👤 სტუმრები: ${guests}\n💰 სულ: ${totalPrice} ₾`;
-    onBook({ type: 'hotel', itemId: hotel.id, itemName: hotel.name, itemImage: hotel.image, details, email, phone, guestName: name });
-    setBooked(true);
+    if (!user) { alert('ჯავშნისთვის საჭიროა ავტორიზაცია'); return; }
+    const details = `🏨 ${hotel.name} — ${selectedRoom.label}\n📅 ${checkIn || '—'} → ${checkOut || '—'} (${nights} ღამე)\n👤 სტუმრები: ${guests}\n💰 სულ: ${totalPrice} ₾`;
+    const { error } = await createBooking({
+      item_id: hotel.id,
+      item_type: 'hotel',
+      item_name: hotel.name,
+      item_image: hotel.image,
+      guest_name: name,
+      email,
+      phone,
+      check_in: checkIn || undefined,
+      check_out: checkOut || undefined,
+      guests,
+      details,
+    });
+    if (!error) setBooked(true);
+    else alert('ჯავშნის შეცდომა: ' + error);
   };
 
   if (booked) {
@@ -297,9 +314,9 @@ export default function HotelDetailPage({ hotel, onBack, onBook }: Props) {
                   </div>
                 </div>
 
-                <button type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold py-4 rounded-2xl text-[15px] cursor-pointer transition-all shadow-lg shadow-blue-200/60">
-                  ჯავშნის გაკეთება
+                <button type="submit" disabled={bookingLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 active:scale-[0.98] text-white font-bold py-4 rounded-2xl text-[15px] cursor-pointer transition-all shadow-lg shadow-blue-200/60 flex items-center justify-center gap-2">
+                  {bookingLoading ? 'იტვირთება...' : 'ჯავშნის გაკეთება'}
                 </button>
 
                 <p className="text-center text-[11px] text-gray-400">📧 დასტური გამოეგზავნება ელ-ფოსტაზე</p>

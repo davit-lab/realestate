@@ -38,6 +38,7 @@ function mapRow(row: any): Listing {
     coordinates: { x: 50, y: 50 },
     lat: row.lat  != null ? Number(row.lat)  : undefined,
     lng: row.lng != null ? Number(row.lng) : undefined,
+    user_id: row.user_id ?? undefined,
   };
 }
 

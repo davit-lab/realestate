@@ -4,7 +4,8 @@ import {
   CheckCircle, Plane, Train, Music, Mountain, Heart, Ticket, Users, Share2
 } from 'lucide-react';
 import type { TourismItem, TourismCategory } from './TourismDetailModal';
-import type { BookingData } from './HotelDetailModal';
+import { useBookings } from '../hooks/useBookings';
+import { useAuth } from '../contexts/AuthContext';
 
 const CAT_COLORS: Record<string, { bg: string; text: string; light: string }> = {
   attractions: { bg: 'from-orange-500 to-amber-500',  text: 'text-orange-600',  light: 'bg-orange-50 border-orange-200' },
@@ -35,10 +36,11 @@ function actionLabel(cat: TourismCategory) {
 interface Props {
   item: TourismItem;
   onBack: () => void;
-  onBook: (data: BookingData) => void;
 }
 
-export default function TourismDetailPage({ item, onBack, onBook }: Props) {
+export default function TourismDetailPage({ item, onBack }: Props) {
+  const { user } = useAuth();
+  const { createBooking, loading: bookingLoading } = useBookings(user?.id);
   const [qty, setQty] = useState(1);
   const [selectedDate, setSelectedDate] = useState('');
   const [name, setName] = useState('');
@@ -53,12 +55,25 @@ export default function TourismDetailPage({ item, onBack, onBook }: Props) {
   const total = unitPrice * qty;
   const isTicket = item.category === 'concerts' || item.category === 'flights' || item.category === 'trains';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) { alert('შეავსეთ სახელი და ელ-ფოსტა'); return; }
+    if (!user) { alert('ჯავშნისთვის საჭიროა ავტორიზაცია'); return; }
     const details = `${item.title}\n📍 ${item.city}\n📅 ${selectedDate || item.date || '—'} ${item.time ? '· ' + item.time : ''}\n🎟 ${qty} × ${unitPrice}${currency}\n💰 სულ: ${total}${currency}\n👤 ${name}`;
-    onBook({ type: 'tourism', itemId: item.id, itemName: item.title, itemImage: item.image, details, email, phone, guestName: name });
-    setBooked(true);
+    const { error } = await createBooking({
+      item_id: item.id,
+      item_type: 'tourism',
+      item_name: item.title,
+      item_image: item.image,
+      guest_name: name,
+      email,
+      phone,
+      check_in: selectedDate || item.date || undefined,
+      guests: qty,
+      details,
+    });
+    if (!error) setBooked(true);
+    else alert('ჯავშნის შეცდომა: ' + error);
   };
 
   if (booked) {
@@ -257,9 +272,9 @@ export default function TourismDetailPage({ item, onBack, onBook }: Props) {
                   </div>
                 )}
 
-                <button type="submit"
-                  className="w-full bg-gray-900 hover:bg-gray-800 active:scale-[0.98] text-white font-bold py-4 rounded-2xl text-[15px] cursor-pointer transition-all">
-                  {actionLabel(item.category)}
+                <button type="submit" disabled={bookingLoading}
+                  className="w-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 active:scale-[0.98] text-white font-bold py-4 rounded-2xl text-[15px] cursor-pointer transition-all flex items-center justify-center gap-2">
+                  {bookingLoading ? 'იტვირთება...' : actionLabel(item.category)}
                 </button>
 
                 <p className="text-center text-[11px] text-gray-400">📧 დასტური გამოეგზავნება ელ-ფოსტაზე</p>

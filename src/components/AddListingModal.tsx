@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Listing, ListingType } from '../types';
 import LocationPicker from './LocationPicker';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 type Section = 'real_estate' | 'hotel' | 'tourism';
 type TourismCat = 'attractions' | 'flights' | 'trains' | 'concerts';
@@ -79,6 +81,7 @@ function inp(extra = '') {
 }
 
 export default function AddListingModal({ isOpen, onClose, onAddListing }: AddListingModalProps) {
+  const { user } = useAuth();
   const [section, setSection] = useState<Section | null>(null);
   const [success, setSuccess] = useState(false);
   const [images, setImages] = useState<string[]>([]);
@@ -132,7 +135,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
     setRe(p => ({ ...p, priceUsd: v, priceGel: v && !isNaN(Number(v)) ? Math.round(Number(v) * 2.7).toString() : '' }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMapError('');
     if (section === 'real_estate') {
@@ -154,8 +157,42 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
         descriptions: { ka: re.description || '', en: '', ru: '' },
         priceLevel: priceLari > 1500000 ? 'high' : priceLari < 300000 ? 'cheap' : 'average',
         coordinates: { x: 35 + Math.random() * 30, y: 35 + Math.random() * 30 }, comments: [],
-        lat: pickedLat, lng: pickedLng
+        lat: pickedLat, lng: pickedLng,
+        user_id: user?.id
       };
+      // Insert to Supabase if configured
+      if (isSupabaseConfigured && user?.id) {
+        const payload = {
+          user_id: user.id,
+          title: newListing.title,
+          deal_type: newListing.type,
+          property_type: re.propType || 'apartment',
+          location: newListing.location,
+          city: newListing.city,
+          district: newListing.district,
+          rooms: newListing.rooms ?? null,
+          area_sqm: newListing.area || null,
+          price: priceLari,
+          currency: 'GEL',
+          description: re.description || '',
+          phone: re.phone || null,
+          floor: re.floor ? parseInt(re.floor) : null,
+          total_floors: null,
+          lat: pickedLat,
+          lng: pickedLng,
+          images: newListing.images || [],
+          status: 'live',
+          vip_status: 'standard',
+          author_name: user?.user_metadata?.name || 'მომხმარებელი',
+          author_avatar: '',
+        };
+        const { error } = await supabase.from('properties').insert(payload);
+        if (error) {
+          console.error('Supabase insert error:', error);
+          alert('განცხადების შენახვა ვერ მოხერხდა: ' + error.message);
+          return;
+        }
+      }
       onAddListing(newListing);
     }
     setSuccess(true);
