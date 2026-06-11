@@ -100,10 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     console.log('SignIn attempt:', email);
     
-    // Hardcoded admin logins
+    // Admin logins from env (build-time only — NOT secure for production; use Supabase custom claims instead)
     const adminAccounts: Record<string, { password: string; name: string }> = {
-      'academy@codezero.ge': { password: 'tweekex15', name: 'Admin' },
-      'admin@adjarahome.ge': { password: 'Adm1n$2026!GH', name: 'Super Admin' },
+      [import.meta.env.VITE_ADMIN_EMAIL_1 || '']: { password: import.meta.env.VITE_ADMIN_PASS_1 || '', name: 'Admin' },
+      [import.meta.env.VITE_ADMIN_EMAIL_2 || '']: { password: import.meta.env.VITE_ADMIN_PASS_2 || '', name: 'Super Admin' },
     };
 
     const adminAccount = adminAccounts[email];

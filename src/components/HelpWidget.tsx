@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   MessageCircle, X, ChevronRight, ChevronDown, ChevronUp,
   Send, Loader2, CheckCircle2, ArrowLeft, Ticket, BookOpen,
-  Clock, User as UserIcon
+  Clock, User as UserIcon, Bot, HelpCircle, Sparkles
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import TypingIndicator from './chat/TypingIndicator';
 
 const FAQ_ITEMS = [
   { q: 'როგორ დავამატო განცხადება?', a: 'ნავიგაციაში "+" ღილაკზე დააჭირეთ. საჭიროა ავტორიზაცია. შეავსეთ ფორმა და დააჭირეთ "გამოქვეყნება".' },
@@ -120,17 +122,17 @@ export default function HelpWidget() {
   };
 
   const Header = ({ title, sub }: { title: string; sub?: string }) => (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 px-5 py-4 flex items-center gap-3 shrink-0">
+    <div className="bg-gradient-to-r from-ss-primary to-ss-primary-dark px-5 py-4 flex items-center gap-3 shrink-0">
       {view !== 'home' && (
-        <button onClick={() => setView('home')} className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer transition-colors shrink-0">
+        <button onClick={() => setView('home')} className="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-white cursor-pointer transition-colors shrink-0">
           <ArrowLeft size={16} />
         </button>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-white font-black text-[14px] leading-tight">{title}</p>
-        {sub && <p className="text-gray-400 text-[11px] mt-0.5">{sub}</p>}
+        <p className="text-white font-bold text-[14px] leading-tight">{title}</p>
+        {sub && <p className="text-purple-200 text-[11px] mt-0.5">{sub}</p>}
       </div>
-      <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white cursor-pointer transition-colors shrink-0">
+      <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-purple-200 hover:text-white cursor-pointer transition-colors shrink-0">
         <X size={16} />
       </button>
     </div>
@@ -139,52 +141,58 @@ export default function HelpWidget() {
   return (
     <>
       {/* Floating trigger */}
-      <button
+      <motion.button
         onClick={() => setOpen(v => !v)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center cursor-pointer transition-all duration-300 ${
-          open ? 'bg-gray-900 scale-95' : 'bg-blue-600 hover:bg-blue-500 hover:scale-110'
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center cursor-pointer transition-colors relative ${
+          open ? 'bg-gray-800 text-white' : 'bg-white text-ss-primary'
         }`}
-        title="დახმარება"
+        style={open ? undefined : { boxShadow: '0 8px 32px rgba(124, 58, 237, 0.25)' }}
       >
-        {open
-          ? <X size={20} className="text-white" />
-          : <MessageCircle size={22} className="text-white" />
-        }
+        {open ? <X size={22} /> : <MessageCircle size={24} />}
         {!open && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow">1</span>
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 rounded-full border-2 border-white" />
         )}
-      </button>
+      </motion.button>
 
       {/* Widget panel */}
-      {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col"
-          style={{ maxHeight: '580px' }}>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+            className="fixed bottom-24 right-6 z-50 w-[380px] bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col premium-shadow"
+            style={{ maxHeight: '600px' }}
+          >
 
           {/* ─── HOME ─── */}
           {view === 'home' && (
             <>
-              <div className="bg-gradient-to-br from-gray-900 to-gray-800 px-5 pt-6 pb-10 shrink-0">
+              <div className="bg-gradient-to-r from-ss-primary to-ss-primary-dark px-5 pt-6 pb-10 shrink-0">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4"><path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" fill="white"/></svg>
+                    <div className="w-8 h-8 bg-white/15 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                      <Sparkles size={16} className="text-white" />
                     </div>
-                    <span className="text-white font-black text-[13px]">adjarahome.ge</span>
+                    <span className="text-white font-bold text-[13px]">adjarahome.ge</span>
                   </div>
-                  <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white transition-colors cursor-pointer">
+                  <button onClick={() => setOpen(false)} className="text-purple-200 hover:text-white transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/10">
                     <X size={16} />
                   </button>
                 </div>
-                <h2 className="text-white font-black text-[20px] leading-tight">გამარჯობა! 👋</h2>
-                <p className="text-gray-400 text-[12px] mt-1">როგორ შეგვიძლია დაგეხმაროთ?</p>
+                <h2 className="text-white font-bold text-[20px] leading-tight">გამარჯობა! 👋</h2>
+                <p className="text-purple-200 text-[12px] mt-1">როგორ შეგვიძლია დაგეხმაროთ?</p>
               </div>
 
               <div className="flex-1 overflow-y-auto px-4 -mt-6 pb-4 space-y-3">
                 {[
                   {
                     view: 'chat' as View,
-                    icon: <MessageCircle size={20} className="text-blue-500" />,
-                    bg: 'bg-blue-50',
+                    icon: <MessageCircle size={20} className="text-ss-primary" />,
+                    bg: 'bg-purple-50',
                     title: 'Customer Service ჩატი',
                     sub: 'ოპერატორი პასუხობს 10 წთ-ში',
                     badge: (
@@ -195,25 +203,27 @@ export default function HelpWidget() {
                   },
                   {
                     view: 'ticket' as View,
-                    icon: <Ticket size={20} className="text-violet-500" />,
-                    bg: 'bg-violet-50',
+                    icon: <Ticket size={20} className="text-ss-primary" />,
+                    bg: 'bg-purple-50',
                     title: 'Support Ticket',
                     sub: 'პასუხი ელ-ფოსტაზე 24 სთ-ში',
                     badge: null,
                   },
                   {
                     view: 'faq' as View,
-                    icon: <BookOpen size={20} className="text-amber-500" />,
-                    bg: 'bg-amber-50',
+                    icon: <BookOpen size={20} className="text-ss-primary" />,
+                    bg: 'bg-purple-50',
                     title: 'FAQ — ხ.დ. კითხვები',
                     sub: `${FAQ_ITEMS.length} პასუხი მზადაა`,
                     badge: null,
                   },
                 ].map(item => (
-                  <button
+                  <motion.button
                     key={item.view}
+                    whileHover={{ scale: 1.015, y: -1 }}
+                    whileTap={{ scale: 0.985 }}
                     onClick={() => setView(item.view)}
-                    className="w-full bg-white border border-gray-200 rounded-2xl p-4 flex items-center gap-3.5 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer text-left"
+                    className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3.5 hover:border-purple-200 hover:shadow-md hover:shadow-purple-500/5 transition-all cursor-pointer text-left premium-shadow"
                   >
                     <div className={`w-10 h-10 ${item.bg} rounded-xl flex items-center justify-center shrink-0`}>
                       {item.icon}
@@ -226,7 +236,7 @@ export default function HelpWidget() {
                       <p className="text-gray-400 text-[11px] mt-0.5">{item.sub}</p>
                     </div>
                     <ChevronRight size={15} className="text-gray-300 shrink-0" />
-                  </button>
+                  </motion.button>
                 ))}
 
                 <div className="flex items-center gap-2 pt-1 pb-2 justify-center">
@@ -241,45 +251,47 @@ export default function HelpWidget() {
           {view === 'chat' && (
             <>
               <Header title="Customer Service ჩატი" sub="ოპერატორი მალე დაგიკავშირდება" />
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gray-50">
-                {chatMessages.map(msg => (
-                  <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-white to-gray-50/50">
+                {chatMessages.map((msg, i) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+                    className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} gap-2`}
+                  >
                     {msg.from === 'support' && (
-                      <div className="w-7 h-7 bg-gray-900 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                        <svg viewBox="0 0 20 20" fill="none" className="w-3.5 h-3.5"><path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" fill="white"/></svg>
+                      <div className="w-7 h-7 bg-gradient-to-br from-ss-primary to-ss-primary-dark rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                        <Bot size={14} className="text-white" />
                       </div>
                     )}
-                    <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${
+                    <div className={`max-w-[78%] rounded-[20px] px-3.5 py-2.5 text-[13px] leading-relaxed ${
                       msg.from === 'user'
-                        ? 'bg-blue-600 text-white rounded-br-sm'
-                        : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
+                        ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white rounded-tr-[6px] shadow-md shadow-purple-500/10'
+                        : 'bg-white border border-gray-100 text-gray-800 rounded-tl-[6px] shadow-sm'
                     }`}>
-                      <p className="text-[13px] leading-relaxed">{msg.text}</p>
-                      <p className={`text-[10px] mt-1 ${msg.from === 'user' ? 'text-blue-200' : 'text-gray-400'}`}>{msg.time}</p>
+                      <p>{msg.text}</p>
+                      <p className={`text-[10px] mt-1 ${msg.from === 'user' ? 'text-purple-200' : 'text-gray-400'}`}>{msg.time}</p>
                     </div>
                     {msg.from === 'user' && (
-                      <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-7 h-7 bg-gradient-to-br from-ss-primary to-ss-primary-dark rounded-full flex items-center justify-center shrink-0 mt-0.5">
                         <UserIcon size={13} className="text-white" />
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
                 {chatSending && (
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-gray-900 rounded-full flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 20 20" fill="none" className="w-3.5 h-3.5"><path d="M10 2L3 8v10h5v-5h4v5h5V8L10 2z" fill="white"/></svg>
+                    <div className="w-7 h-7 bg-gradient-to-br from-ss-primary to-ss-primary-dark rounded-full flex items-center justify-center shrink-0">
+                      <Bot size={14} className="text-white" />
                     </div>
-                    <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                      {[0,1,2].map(i => (
-                        <span key={i} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${i*150}ms` }} />
-                      ))}
-                    </div>
+                    <TypingIndicator color="gray" size="sm" />
                   </div>
                 )}
                 <div ref={chatBottomRef} />
               </div>
-              <div className="px-3 py-3 border-t border-gray-100 bg-white shrink-0">
-                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2">
+              <div className="px-4 py-3.5 border-t border-gray-50 bg-white shrink-0">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-[22px] px-3 py-2.5 focus-within:bg-white focus-within:border-purple-200 focus-within:shadow-sm transition-all">
                   <input
                     type="text"
                     value={chatInput}
@@ -288,13 +300,18 @@ export default function HelpWidget() {
                     placeholder="შეტყობინება..."
                     className="flex-1 bg-transparent text-[13px] text-gray-900 placeholder-gray-400 focus:outline-none"
                   />
-                  <button
+                  <motion.button
                     onClick={sendChat}
                     disabled={!chatInput.trim() || chatSending}
-                    className="w-8 h-8 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 rounded-xl flex items-center justify-center cursor-pointer transition-colors disabled:cursor-not-allowed shrink-0"
+                    whileTap={{ scale: 0.9 }}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+                      chatInput.trim() && !chatSending
+                        ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white shadow-md shadow-purple-500/15'
+                        : 'bg-gray-100 text-gray-300'
+                    }`}
                   >
-                    <Send size={13} className={chatInput.trim() ? 'text-white' : 'text-gray-400'} />
-                  </button>
+                    <Send size={14} />
+                  </motion.button>
                 </div>
               </div>
             </>
@@ -306,37 +323,42 @@ export default function HelpWidget() {
               <Header title="Support Ticket" sub="ვპასუხობთ 24 საათში" />
               <div className="flex-1 overflow-y-auto">
                 {tSent ? (
-                  <div className="flex flex-col items-center justify-center gap-3 p-8 text-center h-full">
-                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                      <CheckCircle2 size={28} className="text-emerald-600" />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center justify-center gap-3 p-8 text-center h-full"
+                  >
+                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center ring-4 ring-emerald-100/50">
+                      <CheckCircle2 size={28} className="text-emerald-500" />
                     </div>
-                    <h3 className="font-black text-gray-900 text-[16px]">ტიკეტი გაგზავნილია!</h3>
-                    <p className="text-gray-500 text-[12px]">24 საათის განმავლობაში პასუხს მიიღებთ <strong>{tEmail}</strong>-ზე.</p>
-                    <button
+                    <h3 className="font-bold text-gray-900 text-[16px]">ტიკეტი გაგზავნილია!</h3>
+                    <p className="text-gray-500 text-[12px]">24 საათის განმავლობაში პასუხს მიიღებთ <strong className="text-gray-700">{tEmail}</strong>-ზე.</p>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => { setTSent(false); setView('home'); }}
-                      className="mt-2 bg-gray-900 text-white font-bold px-5 py-2.5 rounded-xl text-[12px] cursor-pointer hover:bg-gray-800 transition-colors"
+                      className="mt-2 bg-gradient-to-r from-ss-primary to-ss-primary-dark text-white font-bold px-6 py-2.5 rounded-xl text-[12px] cursor-pointer hover:opacity-90 transition-opacity shadow-md shadow-purple-500/15"
                     >
                       მთავარი
-                    </button>
-                  </div>
+                    </motion.button>
+                  </motion.div>
                 ) : (
                   <form onSubmit={sendTicket} className="p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[10px] font-bold text-gray-500 mb-1.5">სახელი</label>
                         <input type="text" value={tName} onChange={e => setTName(e.target.value)} placeholder="სახელი"
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-[12px] focus:outline-none focus:border-gray-900 transition-colors" />
+                          className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2.5 px-3 text-[12px] focus:outline-none focus:border-purple-300 focus:bg-white transition-all" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-gray-500 mb-1.5">ელ-ფოსტა *</label>
                         <input type="email" value={tEmail} onChange={e => setTEmail(e.target.value)} placeholder="mail@..." required
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-[12px] focus:outline-none focus:border-gray-900 transition-colors" />
+                          className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2.5 px-3 text-[12px] focus:outline-none focus:border-purple-300 focus:bg-white transition-all" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1.5">თემა *</label>
                       <select value={tSubject} onChange={e => setTSubject(e.target.value)} required
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-[12px] focus:outline-none focus:border-gray-900 transition-colors cursor-pointer">
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2.5 px-3 text-[12px] focus:outline-none focus:border-purple-300 focus:bg-white transition-all cursor-pointer">
                         <option value="">აირჩიეთ...</option>
                         <option>ანგარიშის პრობლემა</option>
                         <option>განცხადების პრობლემა</option>
@@ -349,14 +371,14 @@ export default function HelpWidget() {
                       <label className="block text-[10px] font-bold text-gray-500 mb-1.5">შეტყობინება *</label>
                       <textarea value={tMessage} onChange={e => setTMessage(e.target.value)}
                         placeholder="დეტალურად აღწერეთ პრობლემა..." required rows={4}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-[12px] resize-none focus:outline-none focus:border-gray-900 transition-colors" />
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2.5 px-3 text-[12px] resize-none focus:outline-none focus:border-purple-300 focus:bg-white transition-all" />
                     </div>
-                    {tError && <p className="text-red-600 text-[11px] font-medium bg-red-50 rounded-xl px-3 py-2">{tError}</p>}
-                    <button type="submit" disabled={tSending}
-                      className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 rounded-2xl text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-60">
+                    {tError && <p className="text-rose-600 text-[11px] font-medium bg-rose-50 rounded-xl px-3 py-2">{tError}</p>}
+                    <motion.button type="submit" disabled={tSending} whileTap={{ scale: 0.98 }}
+                      className="w-full bg-gradient-to-r from-ss-primary to-ss-primary-dark text-white font-bold py-3 rounded-2xl text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-60 shadow-md shadow-purple-500/10">
                       {tSending ? <Loader2 size={15} className="animate-spin" /> : <Send size={14} />}
                       {tSending ? 'იგზავნება...' : 'ტიკეტის გაგზავნა'}
-                    </button>
+                    </motion.button>
                   </form>
                 )}
               </div>
@@ -367,29 +389,36 @@ export default function HelpWidget() {
           {view === 'faq' && (
             <>
               <Header title="ხშირად დასმული კითხვები" sub={`${FAQ_ITEMS.length} პასუხი`} />
-              <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
                 {FAQ_ITEMS.map((item, i) => (
                   <div key={i} className="px-4">
                     <button
                       onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
                       className="w-full flex items-center justify-between py-4 text-left cursor-pointer group"
                     >
-                      <span className="text-[13px] font-semibold text-gray-900 group-hover:text-blue-600 transition-colors pr-3 leading-snug">{item.q}</span>
+                      <span className="text-[13px] font-semibold text-gray-900 group-hover:text-ss-primary transition-colors pr-3 leading-snug">{item.q}</span>
                       {expandedFaq === i
-                        ? <ChevronUp size={15} className="text-blue-600 shrink-0" />
+                        ? <ChevronUp size={15} className="text-ss-primary shrink-0" />
                         : <ChevronDown size={15} className="text-gray-300 shrink-0" />
                       }
                     </button>
                     {expandedFaq === i && (
-                      <p className="pb-4 text-[12px] text-gray-600 leading-relaxed -mt-1">{item.a}</p>
+                      <motion.p
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="pb-4 text-[12px] text-gray-600 leading-relaxed -mt-1"
+                      >
+                        {item.a}
+                      </motion.p>
                     )}
                   </div>
                 ))}
               </div>
             </>
           )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -18,6 +18,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const PORT = process.env.WEBHOOK_PORT || 3001;
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+
+// Secret token middleware — reject unauthenticated webhook calls
+function requireSecret(req, res, next) {
+  if (!WEBHOOK_SECRET) {
+    console.warn('[webhook] WEBHOOK_SECRET not set — running insecure');
+    return next();
+  }
+  const token = req.headers['x-webhook-secret'] || req.query.secret;
+  if (token !== WEBHOOK_SECRET) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
+  next();
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -73,7 +87,7 @@ async function parseWithLLM(rawText) {
  * Expected Telegram Bot Webhook payload shape:
  * { message: { text: "...", chat: { id: 123 }, from: { id: 456 } } }
  */
-app.post('/webhook/telegram', async (req, res) => {
+app.post('/webhook/telegram', requireSecret, async (req, res) => {
   const startTime = Date.now();
 
   try {
@@ -125,7 +139,7 @@ app.post('/webhook/telegram', async (req, res) => {
  * POST /webhook/whatsapp
  * Generic webhook for WhatsApp Business API or similar
  */
-app.post('/webhook/whatsapp', async (req, res) => {
+app.post('/webhook/whatsapp', requireSecret, async (req, res) => {
   const startTime = Date.now();
 
   try {

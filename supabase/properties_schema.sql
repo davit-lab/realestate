@@ -140,7 +140,9 @@ create table if not exists public.properties (
   vip_status      text default 'standard',
   author_name     text,
   author_avatar   text,
-  created_at      timestamptz default now()
+  raw_message     text,
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
 );
 
 alter table public.properties enable row level security;
@@ -171,6 +173,37 @@ CREATE POLICY "admin all properties" ON public.properties FOR all
   using (
     exists (select 1 from public.profiles where id = auth.uid() and is_admin = true)
   );
+
+-- Auto-update updated_at trigger
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS "update_properties_updated_at" ON public.properties;
+CREATE TRIGGER update_properties_updated_at
+  BEFORE UPDATE ON public.properties
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- GIN index for full-text search on raw_message
+CREATE INDEX IF NOT EXISTS idx_properties_raw_message ON public.properties USING gin(to_tsvector('simple', raw_message));
+CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties(status);
+CREATE INDEX IF NOT EXISTS idx_properties_created_at ON public.properties(created_at DESC);
+
+-- Realtime publication (safe)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'properties'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.properties';
+  END IF;
+END $$;
 
 -- ================================================================
 -- Storage buckets
