@@ -7,6 +7,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useViewStats } from '../hooks/useViewStats';
 import { useVerification } from '../hooks/useVerification';
 import { usePaymentCards } from '../hooks/usePaymentCards';
+import { useUserPackages } from '../hooks/useUserPackages';
 
 interface Props { userProfile: any; setUserProfile: any; paymentCards: PaymentCard[]; setPaymentCards: any; myListings: Listing[]; onAddListingClick: () => void; currency: 'GEL' | 'USD'; }
 
@@ -18,6 +19,7 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
   const { stats } = useViewStats(user?.id);
   const { getVerification, uploadDoc } = useVerification(user?.id);
   const { fetchCards, addCard, deleteCard } = usePaymentCards(user?.id);
+  const { packages: userPkgs, hasActivePackage, activePackage } = useUserPackages(user?.id);
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [editName, setEditName] = useState(profile?.name || userProfile.name || '');

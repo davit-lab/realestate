@@ -48,6 +48,10 @@ CREATE TABLE IF NOT EXISTS public.user_packages (
 
 ALTER TABLE public.user_packages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "own packages read" ON public.user_packages;
+CREATE POLICY "own packages read" ON public.user_packages FOR SELECT
+  USING (auth.uid() = user_id);
+
 DROP POLICY IF EXISTS "admin read all user_packages" ON public.user_packages;
 CREATE POLICY "admin read all user_packages" ON public.user_packages FOR SELECT
   USING (

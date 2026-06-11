@@ -348,8 +348,12 @@ export default function App() {
 
   // User uploaded listings subset helper
   const userListings = useMemo(() => {
-    return user ? listings.filter((l) => l.user_id === user.id) : [];
-  }, [listings, user]);
+    if (!user) return [];
+    return listings.filter((l) => {
+      if (l.user_id) return l.user_id === user.id;
+      return l.author?.name === userProfile.name;
+    });
+  }, [listings, user, userProfile.name]);
 
   // Favourited listings subset helper
   const favoritedListingsSubset = useMemo(() => {
