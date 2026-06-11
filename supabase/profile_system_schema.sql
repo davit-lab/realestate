@@ -33,7 +33,7 @@ DROP POLICY IF EXISTS "admin review verifications" ON public.profile_verificatio
 CREATE POLICY "admin review verifications"
   ON public.profile_verifications FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+    public.is_admin()
   );
 
 -- 2. Payment cards (persisted in Supabase, no full numbers)
@@ -86,7 +86,7 @@ DROP POLICY IF EXISTS "public read profile views" ON public.profile_views;
 CREATE POLICY "public read profile views"
   ON public.profile_views FOR SELECT
   USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+    public.is_admin()
     OR auth.uid() = viewed_profile_id
   );
 
@@ -110,7 +110,7 @@ DROP POLICY IF EXISTS "public read listing views" ON public.listing_views;
 CREATE POLICY "public read listing views"
   ON public.listing_views FOR SELECT
   USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+    public.is_admin()
     OR auth.uid() IN (
       SELECT user_id FROM public.properties WHERE id = listing_id
     )
@@ -142,7 +142,7 @@ DROP POLICY IF EXISTS "admin read all activity" ON public.profile_activity;
 CREATE POLICY "admin read all activity"
   ON public.profile_activity FOR SELECT
   USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+    public.is_admin()
   );
 
 -- 6. Add columns to profiles table

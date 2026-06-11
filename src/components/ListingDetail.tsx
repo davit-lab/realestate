@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PhotoGallery from './PhotoGallery';
 import ListingMap from './ListingMap';
+import MortgageCalculator from './MortgageCalculator';
 import { useComments } from '../hooks/useComments';
 import { useAuth } from '../contexts/AuthContext';
 import { useViewTracker } from '../hooks/useViewTracker';
+import { useRecentViews } from '../hooks/useRecentViews';
 import { getAgentDiscountedPrice } from '../utils/pricing';
 import {
   Phone,
@@ -16,13 +18,10 @@ import {
   Sparkles,
   ArrowLeft,
   Share2,
-  Calculator,
-  Check,
   CheckCircle,
-  Scale,
   Eye
 } from 'lucide-react';
-import { Listing, Comment } from '../types';
+import { Listing } from '../types';
 
 interface ListingDetailProps {
   listing: Listing;
@@ -55,18 +54,17 @@ export default function ListingDetail({
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const { user, profile } = useAuth();
-  const { comments, loading: commentsLoading, addComment } = useComments(listing.id);
+  const { comments, addComment } = useComments(listing.id);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const { addRecentView } = useRecentViews();
 
-  // Track unique views
+  // Track unique views and add to recent views
   useViewTracker(listing.id);
+  useEffect(() => {
+    addRecentView(listing);
+  }, [listing.id]);
 
   const openGallery = (idx: number) => { setGalleryIndex(idx); setGalleryOpen(true); };
-
-  // Mortgage Calculator state
-  const [mortgageDownPaymentPercent, setMortgageDownPaymentPercent] = useState(20);
-  const [mortgageYears, setMortgageYears] = useState(15);
-  const [mortgageRate, setMortgageRate] = useState(currency === 'GEL' ? 12 : 8);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -344,91 +342,10 @@ export default function ListingDetail({
             </button>
           </div>
 
-          {/* Live Mortgage Calculator card */}
-          {(() => {
-            const propertyPrice = currency === 'GEL' ? listing.priceLari : listing.priceUsd;
-            const downPayment = (propertyPrice * mortgageDownPaymentPercent) / 100;
-            const loanPrincipal = Math.max(propertyPrice - downPayment, 0);
-            const monthlyRateP = (mortgageRate / 100) / 12;
-            const totalMonths = mortgageYears * 12;
-            
-            let monthlyPayment = 0;
-            if (loanPrincipal > 0) {
-              if (monthlyRateP > 0) {
-                monthlyPayment = (loanPrincipal * monthlyRateP * Math.pow(1 + monthlyRateP, totalMonths)) / (Math.pow(1 + monthlyRateP, totalMonths) - 1);
-              } else {
-                monthlyPayment = loanPrincipal / totalMonths;
-              }
-            }
-
-            return (
-              <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm" id="mortgage-calc-box">
-                <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
-                  <Calculator size={14} className="text-ss-primary" />
-                  <h4 className="font-semibold text-sm text-gray-900">იპოთეკური კალკულატორი</h4>
-                </div>
-                <div className="bg-gray-50 p-3 border border-gray-100 rounded-xl mb-4 flex items-center justify-between">
-                  <span className="text-xs text-gray-500">ქონების ფასი:</span>
-                  <span className="font-semibold text-gray-900 text-sm">{propertyPrice.toLocaleString('en-US', { maximumFractionDigits: 0 })} {currencySymbol}</span>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-gray-500">თანამონაწილეობა:</span>
-                      <span className="text-ss-primary font-semibold">{mortgageDownPaymentPercent}% · {downPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })} {currencySymbol}</span>
-                    </div>
-                    <input type="range" min="10" max="80" step="5" value={mortgageDownPaymentPercent}
-                      onChange={(e) => setMortgageDownPaymentPercent(Number(e.target.value))}
-                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-gray-200"
-                      style={{ accentColor: '#7C3AED' }} />
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>10%</span><span>80%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="text-gray-500">სესხის ვადა:</span>
-                      <span className="text-gray-900 font-medium">{mortgageYears} წელი</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1">
-                      {[5,10,15,20].map(yr => (
-                        <button key={yr} type="button" onClick={() => setMortgageYears(yr)}
-                          className={`py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
-                            mortgageYears === yr ? 'bg-ss-primary text-white border-ss-primary' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                          }`}>{yr}წ.</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="text-gray-500">საპროცენტო განაკვეთი:</span>
-                      <span className="font-semibold text-gray-900">{mortgageRate}%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setMortgageRate(p => Math.max(p-0.5,1))}
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-800 cursor-pointer">-</button>
-                      <div className="flex-1 text-center font-semibold bg-gray-50 border border-gray-200 py-2 text-sm rounded-xl text-gray-900">{mortgageRate}%</div>
-                      <button type="button" onClick={() => setMortgageRate(p => Math.min(p+0.5,25))}
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-800 cursor-pointer">+</button>
-                    </div>
-                    <p className="text-xs text-gray-400 text-center mt-1.5">GEL 10-14% / USD 7-9%</p>
-                  </div>
-                  <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 text-center">
-                    <span className="text-xs text-ss-primary font-medium uppercase tracking-wide block mb-1">ყოველთვიური გადასახადი</span>
-                    <div className="flex items-baseline justify-center gap-1.5 my-1">
-                      <span className="text-2xl font-black text-ss-primary">{Math.round(monthlyPayment).toLocaleString('en-US')}</span>
-                      <span className="text-sm font-semibold text-ss-primary">{currencySymbol}/თვე</span>
-                    </div>
-                    <div className="h-px bg-violet-200 my-2" />
-                    <div className="grid grid-cols-2 gap-2 text-xs text-left">
-                      <div><span className="text-gray-400 block">სესხის ძირი</span><span className="font-semibold text-gray-800">{Math.round(loanPrincipal).toLocaleString()} {currencySymbol}</span></div>
-                      <div><span className="text-gray-400 block">სულ პროცენტი</span><span className="font-semibold text-gray-800">{Math.round((monthlyPayment*totalMonths)-loanPrincipal).toLocaleString()} {currencySymbol}</span></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          <MortgageCalculator
+            propertyPrice={currency === 'GEL' ? listing.priceLari : listing.priceUsd}
+            currency={currency}
+          />
 
           <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm" id="agent-profile-card">
             <div className="flex items-center gap-3 mb-4">

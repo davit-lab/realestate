@@ -110,27 +110,26 @@ export default function SidebarFilter({
     setSelectedStatus('all'); setLocationSearch(''); setLocationDropdownOpen(false);
   };
 
-  const lbl = 'block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5';
-  const inp = 'w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-800 focus:outline-none focus:border-ss-primary focus:bg-white transition-colors';
+  const lbl = 'block text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5';
+  const inp = 'w-full bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-[9px] text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-ss-primary focus:bg-white dark:focus:bg-gray-800 transition-colors';
 
   // Filter locations based on search
-  const filteredPopular = popularCities.filter(loc => 
+  const filteredPopular = popularCities.filter(loc =>
     loc.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
   return (
-    <div className="w-full lg:w-64 xl:w-72 flex flex-col gap-2">
+    <div className="w-full lg:w-64 xl:w-72 flex flex-col gap-3">
 
       {/* ── Type ── */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-4 pt-3 pb-2.5 border-b border-gray-100">
-          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">განცხადების ტიპი</span>
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-4 pt-3 pb-2.5 border-b border-gray-100 dark:border-gray-800">
+          <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">განცხადების ტიპი</span>
         </div>
-        {/* "ყველა" full-width, then 2-col grid for the rest */}
         <div className="p-2 flex flex-col gap-1">
           <button onClick={() => setSelectedType('all')}
             className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer text-center ${
-              selectedType === 'all' ? 'bg-ss-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              selectedType === 'all' ? 'bg-ss-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             ყველა განცხადება
@@ -139,7 +138,7 @@ export default function SidebarFilter({
             {typeLabels.filter(t => t.value !== 'all').map(({ value, label }) => (
               <button key={value} onClick={() => setSelectedType(value)}
                 className={`py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer text-center ${
-                  selectedType === value ? 'bg-ss-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  selectedType === value ? 'bg-ss-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 {label}
@@ -150,7 +149,7 @@ export default function SidebarFilter({
       </div>
 
       {/* ── Location text search ── */}
-      <div className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 relative" ref={dropdownRef}>
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3.5 relative" ref={dropdownRef}>
         <label className={lbl} htmlFor="area-search">მდებარეობა</label>
         <div className="relative">
           <input
@@ -169,9 +168,8 @@ export default function SidebarFilter({
           <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
 
-        {/* Quick city suggestions — clicking only fills the text, does NOT override the City selector */}
         {locationDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[260px] overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg z-50 max-h-[260px] overflow-y-auto">
             <div className="p-3">
               {filteredPopular.length > 0 && (
                 <div>
@@ -185,7 +183,7 @@ export default function SidebarFilter({
                           setLocationDropdownOpen(false);
                           setLocationSearch('');
                         }}
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                       >
                         {city}
                       </button>
@@ -202,14 +200,13 @@ export default function SidebarFilter({
       </div>
 
       {/* ── Detailed filters ── */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-4 pt-3 pb-2.5 border-b border-gray-100 flex items-center gap-1.5">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-4 pt-3 pb-2.5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-1.5">
           <Sliders size={11} className="text-gray-400" />
-          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">ფილტრი</span>
+          <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">ფილტრი</span>
         </div>
 
         <div className="px-4 py-4 flex flex-col gap-4">
-          {/* City + District side by side when both active */}
           <div>
             <label className={lbl} htmlFor="city-sel">ქალაქი</label>
             <select id="city-sel" value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className={inp}>
@@ -230,21 +227,19 @@ export default function SidebarFilter({
             </select>
           </div>
 
-          {/* Price */}
           <div>
             <label className={lbl}>ფასი ({sym})</label>
             <div className="flex items-center gap-2">
               <input type="number" value={priceMin} onChange={(e) => setPriceMin(e.target.value)}
                 placeholder="მინ." min={0} className={inp}
               />
-              <span className="text-gray-300 font-light shrink-0">—</span>
+              <span className="text-gray-300 dark:text-gray-600 font-light shrink-0">—</span>
               <input type="number" value={priceMax} onChange={(e) => setPriceMax(e.target.value)}
                 placeholder="მაქს." min={0} className={inp}
               />
             </div>
           </div>
 
-          {/* Rooms — uniform 4-col */}
           <div>
             <label className={lbl}>ოთახები</label>
             <div className="grid grid-cols-4 gap-1">
@@ -254,7 +249,7 @@ export default function SidebarFilter({
                 return (
                   <button key={val} onClick={() => setRoomFilter(val)}
                     className={`py-[7px] text-[12px] font-medium rounded-lg transition-colors cursor-pointer ${
-                      roomFilter === val ? 'bg-ss-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      roomFilter === val ? 'bg-ss-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                   >
                     {r}
@@ -264,7 +259,6 @@ export default function SidebarFilter({
             </div>
           </div>
 
-          {/* Building status */}
           <div>
             <label className={lbl}>სტატუსი</label>
             <div className="grid grid-cols-2 gap-1">
@@ -276,7 +270,7 @@ export default function SidebarFilter({
               ].map(({ val, label }) => (
                 <button key={val} onClick={() => setSelectedStatus(val)}
                   className={`py-[7px] text-[12px] font-medium rounded-lg transition-colors cursor-pointer ${
-                    selectedStatus === val ? 'bg-ss-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    selectedStatus === val ? 'bg-ss-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
                   {label}
@@ -287,17 +281,46 @@ export default function SidebarFilter({
         </div>
       </div>
 
+      {/* ── Search History ── */}
+      {searchHistory && searchHistory.length > 0 && onSearchHistorySelect && onSearchHistoryRemove && onSearchHistoryClear && (
+        <SearchHistory
+          history={searchHistory}
+          onSelect={onSearchHistorySelect}
+          onRemove={onSearchHistoryRemove}
+          onClear={onSearchHistoryClear}
+        />
+      )}
+
+      {/* ── Recently Viewed ── */}
+      {recentViews && recentViews.length > 0 && onRecentViewSelect && onRecentViewRemove && onRecentViewsClear && (
+        <RecentlyViewed
+          items={recentViews}
+          currency={currency}
+          onSelect={onRecentViewSelect}
+          onRemove={onRecentViewRemove}
+          onClear={onRecentViewsClear}
+        />
+      )}
+
+      {/* ── Mortgage Calculator ── */}
+      {showMortgageCalc && mortgagePropertyPrice && mortgagePropertyPrice > 0 && (
+        <MortgageCalculator
+          propertyPrice={mortgagePropertyPrice}
+          currency={currency}
+        />
+      )}
+
       {/* ── Currency + Language ── */}
       <div className="grid grid-cols-2 gap-2">
         <button onClick={toggleCurrency}
-          className="bg-white border border-gray-200 rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
         >
           <span className="text-[15px] leading-none">{currency === 'GEL' ? '₾' : '$'}</span>
           <span>{currency}</span>
         </button>
         <button
           onClick={() => { setLanguage(langs[(langs.indexOf(language) + 1) % langs.length]); }}
-          className="bg-white border border-gray-200 rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
         >
           <Globe size={13} className="text-gray-400" />
           <span>{language === 'ka' ? 'ქართ.' : language === 'en' ? 'Eng' : 'Рус'}</span>
@@ -307,7 +330,7 @@ export default function SidebarFilter({
       {/* ── Clear ── */}
       {hasActiveFilters && (
         <button onClick={clearAll}
-          className="flex items-center justify-center gap-1.5 w-full text-[12px] font-medium text-gray-500 hover:text-red-600 bg-white border border-gray-200 hover:border-red-200 hover:bg-red-50 py-2.5 rounded-xl transition-colors cursor-pointer"
+          className="flex items-center justify-center gap-1.5 w-full text-[12px] font-medium text-gray-500 hover:text-red-600 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-red-200 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/10 py-2.5 rounded-xl transition-colors cursor-pointer"
         >
           <X size={12} />
           ფილტრების გასუფთავება

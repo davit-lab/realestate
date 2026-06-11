@@ -14,6 +14,19 @@ create table if not exists public.profiles (
 -- Enable RLS
 alter table public.profiles enable row level security;
 
+-- SECURITY DEFINER helper: checks admin status while bypassing RLS (prevents infinite recursion)
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select is_admin from public.profiles where id = auth.uid()),
+    false
+  );
+$$;
+
 -- Users can read their own profile
 drop policy if exists "own profile read" on public.profiles;
 DROP POLICY IF EXISTS "own profile read" ON public.profiles;
@@ -30,23 +43,13 @@ CREATE POLICY "own profile update" ON public.profiles FOR update
 drop policy if exists "admin read all" on public.profiles;
 DROP POLICY IF EXISTS "admin read all" ON public.profiles;
 CREATE POLICY "admin read all" ON public.profiles FOR select
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and is_admin = true
-    )
-  );
+  using (public.is_admin());
 
 -- Admins can update all profiles
 drop policy if exists "admin update all" on public.profiles;
 DROP POLICY IF EXISTS "admin update all" ON public.profiles;
 CREATE POLICY "admin update all" ON public.profiles FOR update
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and is_admin = true
-    )
-  );
+  using (public.is_admin());
 
 -- Auto-create profile row on new signup
 create or replace function public.handle_new_user()

@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { HelpCircle, Search, ChevronDown, Check, LayoutGrid, Map, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { HelpCircle, Search, ChevronDown, Check, LayoutGrid, Map, MapPin, Scale } from 'lucide-react';
 import { Listing, ListingType, PaymentCard, ActiveTab } from './types';
 import { exchangeRate } from './data/mockData';
 import { GEORGIAN_LOCATIONS } from './data/georgianLocations';
@@ -27,9 +28,16 @@ import TourismPage from './components/TourismPage';
 import { type TourismItem } from './components/TourismDetailModal';
 import HotelDetailPage from './components/HotelDetailPage';
 import TourismDetailPage from './components/TourismDetailPage';
+import EmptyState from './components/EmptyState';
+import CompareDrawer from './components/CompareDrawer';
+import MarketStats from './components/MarketStats';
+import ScrollReveal from './components/ScrollReveal';
 import { useAuth } from './contexts/AuthContext';
 import { useFavorites } from './hooks/useFavorites';
 import { useSupabaseListings } from './hooks/useSupabaseListings';
+import { useSearchHistory } from './hooks/useSearchHistory';
+import { useRecentViews } from './hooks/useRecentViews';
+import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 export default function App() {
@@ -159,6 +167,20 @@ export default function App() {
   // Modal toggle
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  // Compare listings
+  const [compareListings, setCompareListings] = useState<string[]>([]);
+  const [showCompareDrawer, setShowCompareDrawer] = useState(false);
+
+  // Search history & recent views
+  const { history: searchHistory, addSearch, removeSearch: removeHistoryItem, clearHistory: clearSearchHistory } = useSearchHistory();
+  const { recentViews, removeRecentView, clearRecentViews } = useRecentViews();
+
+  // Keyboard shortcuts
+  const mainSearchRef = useRef<HTMLInputElement>(null);
+  useKeyboardShortcut('/', () => {
+    mainSearchRef.current?.focus();
+  }, { preventDefault: true });
+
   // Sync window page title with current tab/listing
   useEffect(() => {
     if (activeTab === 'profile') {
@@ -284,6 +306,33 @@ export default function App() {
     setMainSearchBarQuery('');
     setActiveTab('explore');
   };
+
+  // Compare listings helpers
+  const toggleCompare = useCallback((id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setCompareListings(prev => {
+      const exists = prev.includes(id);
+      if (exists) return prev.filter(cid => cid !== id);
+      if (prev.length >= 4) return prev; // max 4
+      return [...prev, id];
+    });
+  }, []);
+
+  const compareListingsData = useMemo(() => {
+    return listings.filter(l => compareListings.includes(l.id));
+  }, [listings, compareListings]);
+
+  // Track search history when filters change meaningfully
+  const lastTrackedSearch = useRef('');
+  useEffect(() => {
+    const key = JSON.stringify({ type: selectedType, city: selectedCity, district: selectedDistrict, rooms: roomFilter, min: priceMin, max: priceMax, status: selectedStatus, q: mainSearchBarQuery });
+    if (key === lastTrackedSearch.current) return;
+    lastTrackedSearch.current = key;
+    const timer = setTimeout(() => {
+      addSearch(mainSearchBarQuery, { type: selectedType, city: selectedCity, district: selectedDistrict, rooms: roomFilter, min: priceMin, max: priceMax, status: selectedStatus });
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [selectedType, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, selectedStatus, mainSearchBarQuery, addSearch]);
 
   // Push new comments/messages generated directly inside housing detail comments list
   const handleDetailSendMessage = (listingId: string, messageText: string) => {
@@ -418,7 +467,7 @@ export default function App() {
   }, [listings, favorites]);
 
   return (
-    <div className="min-h-screen bg-[#F4F4F5] flex flex-col justify-between" id="adjarahome-app">
+    <div className="min-h-screen bg-[#F4F4F5] dark:bg-[#0F0F12] flex flex-col justify-between" id="adjarahome-app">
       {/* Header bar component */}
       <Header
         activeTab={activeTab}
@@ -437,30 +486,34 @@ export default function App() {
       />
 
       {/* Main Core View Area content render */}
-      <main className="flex-1 pb-16">
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="flex-1 pb-16"
+        >
         {activeTab === 'explore' && (
           <div className="w-full flex flex-col">
 
             {/* ── Hero ── */}
             <div className="relative overflow-hidden">
-              {/* Background photo — visible */}
               <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80)' }}
               />
-              {/* Content on solid card */}
               <div className="max-w-3xl mx-auto px-4 py-10 text-center relative z-10">
-                <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl p-6 md:p-8">
-                  {/* Heading */}
-                  <h1 className="text-[34px] md:text-[42px] font-black text-gray-900 tracking-tight mb-3 leading-[1.1]">
+                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-3xl border border-gray-200 dark:border-gray-700 shadow-2xl p-6 md:p-8">
+                  <h1 className="text-[34px] md:text-[42px] font-black text-gray-900 dark:text-white tracking-tight mb-3 leading-[1.1]">
                     იპოვე შენი<br className="md:hidden" />
                     <span className="text-ss-primary">ზუსტი სახლი</span>
                   </h1>
-                  <p className="text-gray-500 text-[15px] mb-6 max-w-md mx-auto leading-relaxed">
+                  <p className="text-gray-500 dark:text-gray-400 text-[15px] mb-6 max-w-md mx-auto leading-relaxed">
                     ბათუმი, თბილისი, ქობულეთი და სხვა ქალაქები — ყველა ვარიანტი ერთ სივრცეში
                   </p>
 
-                  {/* AI Smart Search */}
                   <div className="mb-4">
                     <SmartSearchAI
                       cities={citiesList}
@@ -476,55 +529,54 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Search card */}
-                  <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
-                    {/* Type tabs */}
-                    <div className="flex gap-1 p-2 bg-white border-b border-gray-100">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="flex gap-1 p-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
                       {(['all','sale','rent','pledge','mortgage'] as const).map((v) => {
                         const labels: Record<string,string> = { all:'ყველა', sale:'იყიდება', rent:'ქირავდება', pledge:'გირაო', mortgage:'იპოთეკა' };
                         return (
                           <button key={v} onClick={() => setSelectedType(v)}
                             className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all cursor-pointer ${
                               selectedType === v
-                                ? 'bg-gray-900 text-white'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
                             }`}
                           >{labels[v]}</button>
                         );
                       })}
                     </div>
 
-                    {/* Search row */}
-                    <div className="flex items-stretch bg-white">
+                    <div className="flex items-stretch bg-white dark:bg-gray-900">
                       <div className="flex-1 flex items-center gap-3 px-5 py-4">
                         <Search size={15} className="text-gray-400 shrink-0" />
-                        <input type="text" value={mainSearchBarQuery}
+                        <input
+                          ref={mainSearchRef}
+                          type="text" value={mainSearchBarQuery}
                           onChange={(e) => setMainSearchBarQuery(e.target.value)}
-                          placeholder="ქუჩა, უბანი, ქალაქი..."
-                          className="w-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent"
+                          placeholder="ქუჩა, უბანი, ქალაქი... (/)"
+                          className="w-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none bg-transparent"
                         />
                         {mainSearchBarQuery && (
-                          <button onClick={() => setMainSearchBarQuery('')} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+                          <button onClick={() => setMainSearchBarQuery('')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none">×</button>
                         )}
                       </div>
 
-                      <div className="w-px bg-gray-200 self-stretch my-3" />
+                      <div className="w-px bg-gray-200 dark:bg-gray-700 self-stretch my-3" />
 
                       <div className="relative">
                         <button onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
-                          className="h-full flex items-center gap-2 px-5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap transition-colors"
+                          className="h-full flex items-center gap-2 px-5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer whitespace-nowrap transition-colors"
                         >
                           <MapPin size={14} className="text-gray-400" />
                           <span>{selectedCity === 'all' ? 'ყველა ქალაქი' : selectedCity}</span>
                           <ChevronDown size={14} className="text-gray-400" />
                         </button>
                         {isCityDropdownOpen && (
-                          <div className="absolute left-0 top-full mt-1 min-w-[160px] bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                          <div className="absolute left-0 top-full mt-1 min-w-[160px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 py-1">
                             {[{ value: 'all', label: 'ყველა ქალაქი' }, ...GEORGIAN_LOCATIONS.popular.map(c => ({ value: c, label: c }))].map((opt) => (
                               <button key={opt.value}
                                 onClick={() => { setSelectedCity(opt.value); setIsCityDropdownOpen(false); }}
-                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors ${
-                                  selectedCity === opt.value ? 'text-ss-primary font-semibold bg-violet-50' : 'text-gray-700'
+                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors ${
+                                  selectedCity === opt.value ? 'text-ss-primary font-semibold bg-violet-50 dark:bg-violet-900/20' : 'text-gray-700 dark:text-gray-300'
                                 }`}
                               >
                                 {opt.label}
@@ -535,7 +587,7 @@ export default function App() {
                         )}
                       </div>
 
-                      <div className="w-px bg-gray-200 self-stretch my-3" />
+                      <div className="w-px bg-gray-200 dark:bg-gray-700 self-stretch my-3" />
 
                       <button className="flex items-center gap-2 bg-ss-primary hover:bg-ss-primary-dark text-white font-semibold px-7 text-sm transition-colors cursor-pointer m-2 rounded-xl">
                         <Search size={15} />
@@ -548,6 +600,10 @@ export default function App() {
               </div>
             </div>
 
+            {/* ── Market Stats ── */}
+            <ScrollReveal>
+              <MarketStats listings={filteredListings} currency={currency} />
+            </ScrollReveal>
 
             {/* ── Results ── */}
             <div id="results-section" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
@@ -567,38 +623,62 @@ export default function App() {
                     priceMin={priceMin} setPriceMin={setPriceMin}
                     priceMax={priceMax} setPriceMax={setPriceMax}
                     selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus}
+                    searchHistory={searchHistory}
+                    onSearchHistorySelect={(item) => {
+                      if (item.filters.type) setSelectedType(item.filters.type as any);
+                      if (item.filters.city) setSelectedCity(item.filters.city);
+                      if (item.filters.district) setSelectedDistrict(item.filters.district);
+                      if (item.filters.rooms) setRoomFilter(item.filters.rooms);
+                      if (item.filters.min) setPriceMin(item.filters.min);
+                      if (item.filters.max) setPriceMax(item.filters.max);
+                      if (item.filters.status) setSelectedStatus(item.filters.status);
+                      if (item.query) setMainSearchBarQuery(item.query);
+                    }}
+                    onSearchHistoryRemove={removeHistoryItem}
+                    onSearchHistoryClear={clearSearchHistory}
+                    recentViews={recentViews}
+                    onRecentViewSelect={(id) => handleListingClick(id)}
+                    onRecentViewRemove={removeRecentView}
+                    onRecentViewsClear={clearRecentViews}
                   />
                 </div>
 
                 {/* Grid / Map */}
                 <div className="flex-1 min-w-0 space-y-4">
-                  {/* Results bar with sort + view toggle */}
+                  {/* Results bar with sort + view toggle + compare */}
                   {(() => {
                     const typeGeo: Record<string,string> = { all:'ყველა', sale:'იყიდება', rent:'ქირავდება', mortgage:'იპოთეკა', pledge:'გირაო' };
                     return (
-                      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2.5 gap-2">
-                        <p className="text-sm text-gray-700 shrink-0">
-                          <span className="font-bold text-gray-900">{filteredListings.length}</span>
+                      <div className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5 gap-2">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 shrink-0">
+                          <span className="font-bold text-gray-900 dark:text-white">{filteredListings.length}</span>
                           <span className="text-gray-400 ml-1 hidden sm:inline">{typeGeo[selectedType] ?? selectedType}</span>
                         </p>
                         <div className="flex items-center gap-2">
-                          {/* Sort */}
+                          {compareListings.length > 0 && (
+                            <button
+                              onClick={() => setShowCompareDrawer(true)}
+                              className="flex items-center gap-1.5 text-[12px] font-semibold text-ss-primary bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors cursor-pointer"
+                            >
+                              <Scale size={13} />
+                              შედარება ({compareListings.length})
+                            </button>
+                          )}
                           <select
                             value={sortOrder}
                             onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
-                            className="text-[12px] text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-ss-primary cursor-pointer"
+                            className="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-ss-primary cursor-pointer"
                           >
                             <option value="vip">VIP → სტანდარტი</option>
                             <option value="newest">ახალი → ძველი</option>
                             <option value="price_asc">ფასი: დაბლა ↑</option>
                             <option value="price_desc">ფასი: მაღალა ↓</option>
                           </select>
-                          {/* View toggle */}
-                          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+                          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
                             <button
                               onClick={() => setViewMode('grid')}
                               className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                                viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+                                viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                               }`}
                             >
                               <LayoutGrid size={14} />
@@ -606,7 +686,7 @@ export default function App() {
                             <button
                               onClick={() => setViewMode('map')}
                               className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                                viewMode === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+                                viewMode === 'map' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                               }`}
                             >
                               <Map size={14} />
@@ -619,7 +699,7 @@ export default function App() {
 
                   {/* Map view */}
                   {viewMode === 'map' && (
-                    <div className="h-[600px] rounded-xl overflow-hidden border border-gray-200">
+                    <div className="h-[600px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
                       <MapView
                         listings={filteredListings}
                         favorites={favorites}
@@ -632,19 +712,11 @@ export default function App() {
 
                   {viewMode === 'grid' && (
                     filteredListings.length === 0 ? (
-                      <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
-                        <HelpCircle size={36} className="mx-auto mb-4 text-gray-200" />
-                        <h4 className="font-bold text-gray-900 text-sm mb-2">განცხადება ვერ მოიძებნა</h4>
-                        <p className="text-sm text-gray-400 max-w-sm mx-auto mb-5">
-                          სცადეთ სხვა პარამეტრები ან გაასუფთავეთ ფილტრი
-                        </p>
-                        <button
-                          onClick={() => { setSelectedType('all'); setSearchArea(''); setMainSearchBarQuery(''); setSelectedCity('all'); setSelectedDistrict('all'); setRoomFilter('any'); setPriceMin(''); setPriceMax(''); setSelectedStatus('all'); }}
-                          className="bg-ss-primary hover:bg-ss-primary-dark text-white px-5 py-2 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
-                        >
-                          ფილტრების გასუფთავება
-                        </button>
-                      </div>
+                      <EmptyState
+                        type="search"
+                        actionLabel="ფილტრების გასუფთავება"
+                        onAction={() => { setSelectedType('all'); setSearchArea(''); setMainSearchBarQuery(''); setSelectedCity('all'); setSelectedDistrict('all'); setRoomFilter('any'); setPriceMin(''); setPriceMax(''); setSelectedStatus('all'); }}
+                      />
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                         {filteredListings.map((listing) => (
@@ -656,6 +728,8 @@ export default function App() {
                             currency={currency}
                             exchangeRate={exchangeRate}
                             onCardClick={() => handleListingClick(listing.id)}
+                            isCompareSelected={compareListings.includes(listing.id)}
+                            onCompareToggle={toggleCompare}
                           />
                         ))}
                       </div>
@@ -666,19 +740,21 @@ export default function App() {
             </div>
 
             {/* ── Quick Search bento ── */}
-            <QuickSearch
-              onSelect={(filter) => {
-                setSelectedType('all');
-                setRoomFilter('any');
-                setSelectedStatus('all');
-                setSearchArea('');
-                if (filter.type) setSelectedType(filter.type as any);
-                if (filter.rooms) setRoomFilter(filter.rooms);
-                if (filter.status) setSelectedStatus(filter.status);
-                if (filter.searchArea) setSearchArea(filter.searchArea);
-                window.scrollTo({ top: document.getElementById('results-section')?.offsetTop ?? 400, behavior: 'smooth' });
-              }}
-            />
+            <ScrollReveal>
+              <QuickSearch
+                onSelect={(filter) => {
+                  setSelectedType('all');
+                  setRoomFilter('any');
+                  setSelectedStatus('all');
+                  setSearchArea('');
+                  if (filter.type) setSelectedType(filter.type as any);
+                  if (filter.rooms) setRoomFilter(filter.rooms);
+                  if (filter.status) setSelectedStatus(filter.status);
+                  if (filter.searchArea) setSearchArea(filter.searchArea);
+                  window.scrollTo({ top: document.getElementById('results-section')?.offsetTop ?? 400, behavior: 'smooth' });
+                }}
+              />
+            </ScrollReveal>
 
           </div>
         )}
@@ -729,24 +805,16 @@ export default function App() {
         {activeTab === 'favorites' && (
           <div className="max-w-7xl mx-auto px-4 py-8 font-sans" id="favorites-tab-view">
             <div className="max-w-3xl mx-auto text-center mb-10">
-              <h2 className="text-xl font-bold text-ss-charcoal mb-1">რჩეული განცხადებები</h2>
-              <p className="text-xs text-ss-slate">თქვენს მიერ შენახული და მოწონებული უძრავი ქონებები</p>
+              <h2 className="text-xl font-bold text-ss-charcoal dark:text-white mb-1">რჩეული განცხადებები</h2>
+              <p className="text-xs text-ss-slate dark:text-gray-400">თქვენს მიერ შენახული და მოწონებული უძრავი ქონებები</p>
             </div>
 
             {favoritedListingsSubset.length === 0 ? (
-              <div className="bg-white border border-ss-border rounded-lg p-12 text-center text-ss-slate max-w-md mx-auto premium-card-shadow">
-                <HelpCircle size={40} className="mx-auto mb-3 opacity-30 text-ss-primary" />
-                <h4 className="font-bold text-ss-charcoal text-sm">რჩეულები ცარიელია</h4>
-                <p className="text-xs text-ss-slate mt-1 max-w-xs mx-auto leading-relaxed">
-                  მონიშნეთ განცხადებები გულის ხატულაზე მთავარ გვერდზე შესანახად
-                </p>
-                <button
-                  onClick={() => setActiveTab('explore')}
-                  className="bg-ss-primary hover:bg-ss-primary-dark text-white px-5 py-2.5 rounded-full font-bold text-xs mt-4 cursor-pointer"
-                >
-                  განცხადებების ნახვა
-                </button>
-              </div>
+              <EmptyState
+                type="favorites"
+                actionLabel="განცხადებების ნახვა"
+                onAction={() => setActiveTab('explore')}
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
                 {favoritedListingsSubset.map((listing) => (
@@ -758,6 +826,8 @@ export default function App() {
                     currency={currency}
                     exchangeRate={exchangeRate}
                     onCardClick={() => handleListingClick(listing.id)}
+                    isCompareSelected={compareListings.includes(listing.id)}
+                    onCompareToggle={toggleCompare}
                   />
                 ))}
               </div>
@@ -813,7 +883,19 @@ export default function App() {
         {activeTab === 'privacy' && (
           <PrivacyPage onBack={() => setActiveTabWithUrl('explore')} />
         )}
-      </main>
+        </motion.main>
+      </AnimatePresence>
+
+      {/* Compare Drawer */}
+      <CompareDrawer
+        listings={compareListingsData}
+        currency={currency}
+        isOpen={showCompareDrawer}
+        onClose={() => setShowCompareDrawer(false)}
+        onRemove={(id) => toggleCompare(id)}
+        onClear={() => setCompareListings([])}
+        onViewDetail={(id) => handleListingClick(id)}
+      />
 
       {/* Modal form for listing creation trigger */}
       <AddListingModal

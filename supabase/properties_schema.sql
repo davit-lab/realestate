@@ -23,7 +23,7 @@ CREATE POLICY "auth read own tickets" ON public.support_tickets FOR select
 drop policy if exists "admin read all tickets" on public.support_tickets;
 DROP POLICY IF EXISTS "admin read all tickets" ON public.support_tickets;
 CREATE POLICY "admin read all tickets" ON public.support_tickets FOR select
-  using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
+  using (public.is_admin());
 
 drop policy if exists "auth insert tickets" on public.support_tickets;
 DROP POLICY IF EXISTS "auth insert tickets" ON public.support_tickets;
@@ -33,12 +33,12 @@ CREATE POLICY "auth insert tickets" ON public.support_tickets FOR insert
 drop policy if exists "admin update tickets" on public.support_tickets;
 DROP POLICY IF EXISTS "admin update tickets" ON public.support_tickets;
 CREATE POLICY "admin update tickets" ON public.support_tickets FOR update
-  using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
+  using (public.is_admin());
 
 drop policy if exists "admin delete tickets" on public.support_tickets;
 DROP POLICY IF EXISTS "admin delete tickets" ON public.support_tickets;
 CREATE POLICY "admin delete tickets" ON public.support_tickets FOR delete
-  using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
+  using (public.is_admin());
 
 -- ================================================================
 -- Profiles table
@@ -76,7 +76,7 @@ CREATE POLICY "auth update own profile" ON public.profiles FOR update
 drop policy if exists "admin all profiles" on public.profiles;
 DROP POLICY IF EXISTS "admin all profiles" ON public.profiles;
 CREATE POLICY "admin all profiles" ON public.profiles FOR all
-  using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
+  using (public.is_admin());
 
 -- ================================================================
 -- Comments table
@@ -171,7 +171,7 @@ drop policy if exists "admin all properties" on public.properties;
 DROP POLICY IF EXISTS "admin all properties" ON public.properties;
 CREATE POLICY "admin all properties" ON public.properties FOR all
   using (
-    exists (select 1 from public.profiles where id = auth.uid() and is_admin = true)
+    public.is_admin()
   );
 
 -- Auto-update updated_at trigger

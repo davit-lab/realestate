@@ -18,12 +18,12 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin read all transactions" ON public.transactions;
 DROP POLICY IF EXISTS "admin read all transactions" ON public.transactions;
 CREATE POLICY "admin read all transactions" ON public.transactions FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "admin insert transactions" ON public.transactions;
 DROP POLICY IF EXISTS "admin insert transactions" ON public.transactions;
 CREATE POLICY "admin insert transactions" ON public.transactions FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  WITH CHECK (public.is_admin());
 
 -- 2. User VIP packages
 CREATE TABLE IF NOT EXISTS public.user_packages (
@@ -42,12 +42,12 @@ ALTER TABLE public.user_packages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin read all user_packages" ON public.user_packages;
 DROP POLICY IF EXISTS "admin read all user_packages" ON public.user_packages;
 CREATE POLICY "admin read all user_packages" ON public.user_packages FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "admin write user_packages" ON public.user_packages;
 DROP POLICY IF EXISTS "admin write user_packages" ON public.user_packages;
 CREATE POLICY "admin write user_packages" ON public.user_packages FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 -- 3. Support templates
 CREATE TABLE IF NOT EXISTS public.support_templates (
@@ -66,7 +66,7 @@ ALTER TABLE public.support_templates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin manage templates" ON public.support_templates;
 DROP POLICY IF EXISTS "admin manage templates" ON public.support_templates;
 CREATE POLICY "admin manage templates" ON public.support_templates FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 -- 4. Admin notes on support tickets
 CREATE TABLE IF NOT EXISTS public.ticket_admin_notes (
@@ -82,7 +82,7 @@ ALTER TABLE public.ticket_admin_notes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin ticket notes" ON public.ticket_admin_notes;
 DROP POLICY IF EXISTS "admin ticket notes" ON public.ticket_admin_notes;
 CREATE POLICY "admin ticket notes" ON public.ticket_admin_notes FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 -- 5. Site settings (feature toggles, SEO, announcements)
 CREATE TABLE IF NOT EXISTS public.site_settings (
@@ -97,7 +97,7 @@ ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin site settings" ON public.site_settings;
 DROP POLICY IF EXISTS "admin site settings" ON public.site_settings;
 CREATE POLICY "admin site settings" ON public.site_settings FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 -- Insert default settings
 INSERT INTO public.site_settings (key, value, description) VALUES
@@ -130,7 +130,7 @@ ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin announcements" ON public.announcements;
 DROP POLICY IF EXISTS "admin announcements" ON public.announcements;
 CREATE POLICY "admin announcements" ON public.announcements FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 -- 7. Admin audit log
 CREATE TABLE IF NOT EXISTS public.admin_audit_log (
@@ -147,13 +147,13 @@ ALTER TABLE public.admin_audit_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin audit log" ON public.admin_audit_log;
 DROP POLICY IF EXISTS "admin audit log" ON public.admin_audit_log;
 CREATE POLICY "admin audit log" ON public.admin_audit_log FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
+  USING (public.is_admin());
 
 -- 8. Admin view for user emails
 CREATE OR REPLACE VIEW public.admin_user_emails AS
 SELECT au.id, au.email, au.created_at as user_created_at, au.confirmed_at, au.last_sign_in_at
 FROM auth.users au
-WHERE EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true);
+WHERE public.is_admin();
 
 -- 9. Auto-update trigger for support_templates
 DROP TRIGGER IF EXISTS update_support_templates_updated_at ON public.support_templates;
