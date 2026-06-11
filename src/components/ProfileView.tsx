@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Wallet, PlusCircle, CreditCard, Layers, ChevronRight, ShieldCheck, User, Plus, TrendingUp, CheckCircle, Zap, Star, Crown, MapPin, ArrowRight, Check, Camera, Loader2, Save, LayoutDashboard, Eye, BadgeCheck, AlertCircle, Clock, FileText, Trash2, Settings, Bell, Phone, Mail, BarChart3, Upload } from 'lucide-react';
+import { Wallet, PlusCircle, CreditCard, Layers, ChevronRight, ShieldCheck, User, Plus, TrendingUp, CheckCircle, Zap, Star, Crown, MapPin, ArrowRight, Check, Camera, Loader2, Save, LayoutDashboard, Eye, BadgeCheck, AlertCircle, Clock, FileText, Trash2, Settings, Bell, Phone, Mail, BarChart3, Upload, CalendarDays, Ticket, XCircle } from 'lucide-react';
 import { PaymentCard, Listing, PaymentCardDB, ProfileVerification, DocType } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
@@ -8,10 +8,11 @@ import { useViewStats } from '../hooks/useViewStats';
 import { useVerification } from '../hooks/useVerification';
 import { usePaymentCards } from '../hooks/usePaymentCards';
 import { useUserPackages } from '../hooks/useUserPackages';
+import { useBookings } from '../hooks/useBookings';
 
 interface Props { userProfile: any; setUserProfile: any; paymentCards: PaymentCard[]; setPaymentCards: any; myListings: Listing[]; onAddListingClick: () => void; currency: 'GEL' | 'USD'; }
 
-type TabId = 'dashboard' | 'my_listings' | 'boost' | 'wallet' | 'verification' | 'settings';
+type TabId = 'dashboard' | 'my_listings' | 'bookings' | 'boost' | 'wallet' | 'verification' | 'settings';
 
 export default function ProfileView({ userProfile, setUserProfile, myListings, onAddListingClick, currency }: Props) {
   const { user, profile, refreshProfile } = useAuth();
@@ -20,6 +21,7 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
   const { getVerification, uploadDoc } = useVerification(user?.id);
   const { fetchCards, addCard, deleteCard } = usePaymentCards(user?.id);
   const { packages: userPkgs, hasActivePackage, activePackage } = useUserPackages(user?.id);
+  const { bookings, loading: bookingsLoading, cancelBooking } = useBookings(user?.id);
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [editName, setEditName] = useState(profile?.name || userProfile.name || '');
@@ -62,9 +64,10 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
   const refill = (e: any) => { e.preventDefault(); const n=parseFloat(refAmt); if (isNaN(n)||n<=0) { setRFb('სწორი თანხა'); return; } setUserProfile((p:any)=>({...p,balance:p.balance+n})); setRFb(); setTimeout(()=>setRFb(null),3500); };
   const submitVerif = async () => { if (!frontFile) { setVFb('ატვირთეთ ფოტო'); return; } setVFb(null); const {data,error} = await uploadDoc(docType,frontFile,backFile||undefined); if (error) setVFb('შეცდომა: '+error); else { setVerif(data); setVFb('დოკუმენტი აიტვირთა!'); setFrontFile(null); setBackFile(null); } setTimeout(()=>setVFb(null),5000); };
 
-  const nav: {id:TabId;label:string;icon:any}[] = [
+  const nav: {id:TabId;label:string;icon:any;badge?:number}[] = [
     {id:'dashboard',label:'დაფა',icon:<LayoutDashboard size={15}/>},
     {id:'my_listings',label:'ჩემი განცხადებები',icon:<Layers size={15}/>},
+    {id:'bookings',label:'ჯავშნები',icon:<Ticket size={15}/>, badge: bookings.filter(b => b.status === 'pending').length},
     {id:'boost',label:'გაბუსთება',icon:<Zap size={15}/>},
     {id:'wallet',label:'საფულე',icon:<Wallet size={15}/>},
     {id:'verification',label:'ვერიფიკაცია',icon:<BadgeCheck size={15}/>},
@@ -100,7 +103,7 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1.5">
               {nav.map(sub=>{const a=activeTab===sub.id; return (
                 <button key={sub.id} onClick={()=>setActiveTab(sub.id)} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all cursor-pointer text-[12px] font-medium ${a?'bg-gray-900 text-white shadow-sm':'text-gray-600 hover:bg-gray-50'}`}>
-                  <div className="flex items-center gap-2">{sub.icon}<span>{sub.label}</span></div>
+                  <div className="flex items-center gap-2">{sub.icon}<span>{sub.label}</span>{sub.badge ? <span className="ml-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{sub.badge}</span> : null}</div>
                   <ChevronRight size={13} className={a?'text-white/50':'text-gray-300'} />
                 </button>
               );})}
@@ -151,20 +154,127 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
             )}
 
             {activeTab==='my_listings' && (
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
-                  <div><h4 className="font-bold text-[14px]">ჩემი განცხადებები</h4><p className="text-gray-500 text-[11px] mt-0.5">პორტალზე განთავსებული ქონება</p></div>
-                  <button onClick={onAddListingClick} className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-1.5 rounded-lg font-medium text-[11px] flex items-center gap-1.5 cursor-pointer"><Plus size={12}/><span>განცხადება</span></button>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-[16px] text-gray-900">ჩემი განცხადებები</h4>
+                    <p className="text-gray-500 text-[12px] mt-0.5">{myListings.length} განცხადება პორტალზე</p>
+                  </div>
+                  <button onClick={onAddListingClick} className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-xl font-medium text-[12px] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm">
+                    <Plus size={14}/><span>დამატება</span>
+                  </button>
                 </div>
-                {myListings.length===0 ? <div className="text-center py-10"><Layers size={32} className="mx-auto mb-2 opacity-20 text-gray-700"/><p className="font-medium text-[12px]">განცხადება არ არის</p></div> : (
-                  <div className="space-y-2">
-                    {myListings.map(l=>{ const p=(currency==='GEL'?l.priceLari:l.priceUsd).toLocaleString(); return (
-                      <div key={l.id} className="border border-gray-200 rounded-xl p-3 flex items-center gap-3 hover:border-gray-300 transition-all">
-                        <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-gray-50 border border-gray-200"><img src={l.image} className="w-full h-full object-cover" referrerPolicy="no-referrer"/></div>
-                        <div className="flex-1 min-w-0"><h5 className="font-semibold text-[13px] line-clamp-1">{l.title}</h5><span className="text-gray-700 font-bold text-[13px]">{p} {sym}</span><div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><MapPin size={9}/><span>{l.district},{l.city}</span></div></div>
-                        <div className="text-right shrink-0"><div className="flex items-center gap-1 text-[11px] text-gray-500"><Eye size={12}/><span>{l.viewCount||0} ნახვა</span></div>{l.vipStatus!=='standard'&&<span className="text-[10px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded font-bold">{l.vipStatus}</span>}</div>
-                      </div>
-                    );})}
+                {myListings.length===0 ? (
+                  <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Layers size={28} className="text-gray-300" />
+                    </div>
+                    <p className="font-bold text-[14px] text-gray-700 mb-1">განცხადება არ არის</p>
+                    <p className="text-gray-400 text-[12px] mb-4">თქვენი უძრავი ქონება გამოჩნდება აქ</p>
+                    <button onClick={onAddListingClick} className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl font-medium text-[12px] cursor-pointer transition-colors">განცხადების დამატება</button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {myListings.map(l => {
+                      const p = (currency==='GEL' ? l.priceLari : l.priceUsd).toLocaleString();
+                      return (
+                        <div key={l.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 hover:shadow-md transition-all group">
+                          <div className="relative h-40 bg-gray-100">
+                            <img src={l.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={l.title} />
+                            {l.vipStatus !== 'standard' && (
+                              <span className={`absolute top-3 left-3 text-[10px] font-bold px-2 py-1 rounded-full text-white shadow-sm ${l.vipStatus==='super_vip'?'bg-gradient-to-r from-amber-500 to-orange-500':l.vipStatus==='vip+'?'bg-gradient-to-r from-violet-500 to-purple-600':'bg-gradient-to-r from-blue-500 to-indigo-500'}`}>
+                                {l.vipStatus.toUpperCase()}
+                              </span>
+                            )}
+                            <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-1 rounded-lg">{l.type==='sale'?'იყიდება':l.type==='rent'?'ქირავდება':l.type==='mortgage'?'იპოთეკა':l.type==='pledge'?'გირაო':'ქირავდება დღიურად'}</span>
+                          </div>
+                          <div className="p-4">
+                            <h5 className="font-bold text-[13px] text-gray-900 line-clamp-1 mb-1">{l.title}</h5>
+                            <div className="flex items-center gap-1 text-[11px] text-gray-500 mb-2">
+                              <MapPin size={11} />
+                              <span>{l.district}, {l.city}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[15px] font-black text-gray-900">{p} {sym}</span>
+                              <div className="flex items-center gap-1 text-[11px] text-gray-400">
+                                <Eye size={12} />
+                                <span>{l.viewCount||0}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 mt-3 text-[11px] text-gray-500 border-t border-gray-100 pt-3">
+                              <span>{l.rooms} ოთახი</span>
+                              <span>{l.area} მ²</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab==='bookings' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-[16px] text-gray-900">ჯავშნები</h4>
+                    <p className="text-gray-500 text-[12px] mt-0.5">{bookings.length} ჯავშანი</p>
+                  </div>
+                </div>
+                {bookingsLoading ? (
+                  <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm">
+                    <Loader2 size={28} className="animate-spin mx-auto text-gray-300 mb-3" />
+                    <p className="text-gray-400 text-[12px]">იტვირთება...</p>
+                  </div>
+                ) : bookings.length === 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Ticket size={28} className="text-gray-300" />
+                    </div>
+                    <p className="font-bold text-[14px] text-gray-700 mb-1">ჯავშანი არ არის</p>
+                    <p className="text-gray-400 text-[12px] mb-4">სასტუმროების და ტურიზმის დაჯავშნები გამოჩნდება აქ</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {bookings.map(b => {
+                      const statusColors = {
+                        pending:   { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  label: 'მიმდინარე' },
+                        confirmed: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', label: 'დადასტურებული' },
+                        cancelled: { bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',     label: 'გაუქმებული' },
+                      };
+                      const sc = statusColors[b.status] || statusColors.pending;
+                      return (
+                        <div key={b.id} className={`bg-white border rounded-2xl p-4 shadow-sm flex items-start gap-4 ${sc.border}`}>
+                          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-gray-100 border border-gray-200">
+                            {b.item_image ? <img src={b.item_image} className="w-full h-full object-cover" alt={b.item_name} /> : <Ticket size={20} className="m-5 text-gray-300" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <h5 className="font-bold text-[13px] text-gray-900 line-clamp-1">{b.item_name}</h5>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sc.bg} ${sc.text} border ${sc.border}`}>{sc.label}</span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 mb-1">👤 {b.guest_name}</p>
+                            {b.check_in && (
+                              <div className="flex items-center gap-1 text-[11px] text-gray-500 mb-1">
+                                <CalendarDays size={11} />
+                                <span>{b.check_in}{b.check_out ? ` → ${b.check_out}` : ''}</span>
+                              </div>
+                            )}
+                            {b.guests > 1 && <p className="text-[11px] text-gray-500">{b.guests} სტუმარი</p>}
+                          </div>
+                          {b.status === 'pending' && (
+                            <button
+                              onClick={async () => { const { error } = await cancelBooking(b.id); if (error) alert('შეცდომა: ' + error); }}
+                              className="shrink-0 text-gray-400 hover:text-red-500 cursor-pointer transition-colors"
+                              title="გაუქმება"
+                            >
+                              <XCircle size={18} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

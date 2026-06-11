@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { HelpCircle, Search, ChevronDown, Check, LayoutGrid, Map, MapPin } from 'lucide-react';
 import { Listing, ListingType, PaymentCard, ActiveTab } from './types';
 import { exchangeRate } from './data/mockData';
@@ -34,11 +35,67 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 export default function App() {
   const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
   const { dbListings } = useSupabaseListings();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Navigation states
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
+
+  // URL → activeTab sync on mount and route change
+  useEffect(() => {
+    const path = location.pathname;
+    const pathToTab: Record<string, ActiveTab> = {
+      '/': 'explore',
+      '/explore': 'explore',
+      '/favorites': 'favorites',
+      '/messages': 'messages',
+      '/profile': 'profile',
+      '/admin': 'admin',
+      '/add-property': 'add_property',
+      '/hotels': 'hotels',
+      '/tourism': 'tourism',
+      '/terms': 'terms',
+      '/privacy': 'privacy',
+    };
+    const tab = pathToTab[path];
+    if (tab) setActiveTab(tab);
+    // /listing/:id → detail tab
+    if (path.startsWith('/listing/')) {
+      const id = path.split('/listing/')[1];
+      setSelectedListingId(id || null);
+      setActiveTab('detail');
+    }
+  }, [location.pathname]);
+
+  // activeTab → URL sync
+  const setActiveTabWithUrl = useCallback((tab: ActiveTab) => {
+    setActiveTab(tab);
+    const tabToPath: Record<string, string> = {
+      explore: '/',
+      favorites: '/favorites',
+      messages: '/messages',
+      profile: '/profile',
+      admin_panel: '/admin',
+      add_property: '/add-property',
+      hotels: '/hotels',
+      tourism: '/tourism',
+      terms: '/terms',
+      privacy: '/privacy',
+    };
+    const path = tabToPath[tab];
+    if (path && location.pathname !== path) {
+      navigate(path, { replace: false });
+    }
+  }, [navigate, location.pathname]);
+
+  // Listing click → /listing/:id
+  const handleListingClick = useCallback((id: string) => {
+    setSelectedListingId(id);
+    setActiveTab('detail');
+    navigate(`/listing/${id}`);
+  }, [navigate]);
 
   // Core collections — load from localStorage or start empty
   const [localListings, setLocalListings] = useState<Listing[]>(() => {
