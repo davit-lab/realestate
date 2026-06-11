@@ -115,6 +115,19 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
                     <div key={i} className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center gap-2 text-gray-400 mb-2">{s.i}<span className="text-[11px] font-medium">{s.l}</span></div><p className="text-[20px] font-black">{s.v}</p></div>
                   ))}
                 </div>
+
+                {hasActivePackage && activePackage && (
+                  <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Crown size={20} className="text-violet-600" />
+                      <div>
+                        <p className="font-bold text-[13px] text-violet-800">{activePackage.package_type.toUpperCase()} პაკეტი</p>
+                        <p className="text-[11px] text-violet-600">განცხადებები: {activePackage.listings_remaining}/{activePackage.total_listings} • ვადა: {new Date(activePackage.expires_at).toLocaleDateString('ka-GE')}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-violet-200 text-violet-800 px-2 py-1 rounded-full font-bold">აქტიური</span>
+                  </div>
+                )}
                 <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                   <h4 className="font-bold text-[14px] mb-4">ბოლო მნახველები</h4>
                   {stats.recentViewers.length===0 ? <p className="text-[12px] text-gray-400">ჯერ არავინ გინახავთ</p> : (
