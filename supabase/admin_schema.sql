@@ -173,6 +173,19 @@ WHERE EXISTS (
   WHERE id = auth.uid() AND is_admin = true
 );
 
--- 7. Add realtime for transactions and user_packages
-ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.user_packages;
+-- 7. Add realtime for transactions and user_packages (safe)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'transactions'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'user_packages'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.user_packages';
+  END IF;
+END $$;

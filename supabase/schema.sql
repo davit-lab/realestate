@@ -45,6 +45,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS "update_properties_updated_at" ON properties;
 CREATE TRIGGER update_properties_updated_at
   BEFORE UPDATE ON properties
   FOR EACH ROW
@@ -58,8 +59,19 @@ BEGIN;
   CREATE PUBLICATION supabase_realtime;
 COMMIT;
 
--- Add the properties table to the realtime publication
-ALTER PUBLICATION supabase_realtime ADD TABLE properties;
+-- Add the properties table to the realtime publication (safe)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'properties'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.properties';
+  END IF;
+END $$;
+
+-- Ensure raw_message column exists (if table was created by another schema first)
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS raw_message TEXT;
 
 -- 6. GIN index for full-text search on raw_message (optional but recommended)
 CREATE INDEX IF NOT EXISTS idx_properties_raw_message ON properties USING gin(to_tsvector('simple', raw_message));

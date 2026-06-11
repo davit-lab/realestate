@@ -1,11 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Wallet, PlusCircle, CreditCard, Layers, ChevronRight, ShieldCheck,
-  User, Plus, TrendingUp, CheckCircle, Zap, Star, Crown, MapPin,
-  ArrowRight, Check, Camera, Loader2, Save, LayoutDashboard, Eye,
-  BadgeCheck, AlertCircle, Clock, FileText, Trash2, Star as DefaultIcon,
-  Settings, Bell, Phone, Mail, BarChart3, Upload
-} from 'lucide-react';
+import { Wallet, PlusCircle, CreditCard, Layers, ChevronRight, ShieldCheck, User, Plus, TrendingUp, CheckCircle, Zap, Star, Crown, MapPin, ArrowRight, Check, Camera, Loader2, Save, LayoutDashboard, Eye, BadgeCheck, AlertCircle, Clock, FileText, Trash2, Settings, Bell, Phone, Mail, BarChart3, Upload } from 'lucide-react';
 import { PaymentCard, Listing, PaymentCardDB, ProfileVerification, DocType } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
@@ -13,673 +8,282 @@ import { useViewStats } from '../hooks/useViewStats';
 import { useVerification } from '../hooks/useVerification';
 import { usePaymentCards } from '../hooks/usePaymentCards';
 
-interface ProfileViewProps {
-  userProfile: {
-    name: string;
-    userId: string;
-    avatar: string;
-    balance: number;
-    notificationsEnabled: boolean;
-    smsEnabled: boolean;
-  };
-  setUserProfile: React.Dispatch<React.SetStateAction<any>>;
-  paymentCards: PaymentCard[];
-  setPaymentCards: React.Dispatch<React.SetStateAction<PaymentCard[]>>;
-  myListings: Listing[];
-  onAddListingClick: () => void;
-  currency: 'GEL' | 'USD';
-}
+interface Props { userProfile: any; setUserProfile: any; paymentCards: PaymentCard[]; setPaymentCards: any; myListings: Listing[]; onAddListingClick: () => void; currency: 'GEL' | 'USD'; }
 
-export default function ProfileView({
-  userProfile,
-  setUserProfile,
-  paymentCards: localPaymentCards,
-  setPaymentCards,
-  myListings,
-  onAddListingClick,
-  currency,
-}: ProfileViewProps) {
+type TabId = 'dashboard' | 'my_listings' | 'boost' | 'wallet' | 'verification' | 'settings';
+
+export default function ProfileView({ userProfile, setUserProfile, myListings, onAddListingClick, currency }: Props) {
   const { user, profile, refreshProfile } = useAuth();
   const { updateProfile, uploadAvatar, saving, uploadingAvatar } = useProfile(user?.id);
-  const { stats, loading: statsLoading, refetch: refetchStats } = useViewStats(user?.id);
-  const { getVerification, uploadDoc, uploading: verifyingUpload } = useVerification(user?.id);
-  const { fetchCards, addCard, deleteCard, setDefaultCard, loading: cardsLoading } = usePaymentCards(user?.id);
+  const { stats } = useViewStats(user?.id);
+  const { getVerification, uploadDoc } = useVerification(user?.id);
+  const { fetchCards, addCard, deleteCard } = usePaymentCards(user?.id);
 
-  // ── Tabs ──
-  type TabId = 'dashboard' | 'my_listings' | 'boost' | 'wallet' | 'verification' | 'settings';
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-
-  // ── Profile Edit State ──
   const [editName, setEditName] = useState(profile?.name || userProfile.name || '');
   const [editPhone, setEditPhone] = useState(profile?.phone || '');
   const [editBio, setEditBio] = useState(profile?.bio || '');
-  const [profileFeedback, setProfileFeedback] = useState<string | null>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [pfFb, setPfFb] = useState<string | null>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
 
-  // ── Verification State ──
-  const [verification, setVerification] = useState<ProfileVerification | null>(null);
+  const [verif, setVerif] = useState<ProfileVerification | null>(null);
   const [docType, setDocType] = useState<DocType>('id_card');
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
-  const [verifFeedback, setVerifFeedback] = useState<string | null>(null);
+  const [vFb, setVFb] = useState<string | null>(null);
 
-  // ── Payment Cards (Supabase) ──
   const [dbCards, setDbCards] = useState<PaymentCardDB[]>([]);
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
-  const [cardholder, setCardholder] = useState('');
-  const [cardFeedback, setCardFeedback] = useState<string | null>(null);
+  const [cNum, setCNum] = useState('');
+  const [cExp, setCExp] = useState('');
+  const [cCvc, setCCvc] = useState('');
+  const [cHold, setCHold] = useState('');
+  const [cFb, setCFb] = useState<string | null>(null);
 
-  // ── Wallet / Refill ──
-  const [refillAmount, setRefillAmount] = useState('50');
-  const [refillFeedback, setRefillFeedback] = useState<string | null>(null);
+  const [refAmt, setRefAmt] = useState('50');
+  const [rFb, setRFb] = useState<string | null>(null);
+  const [actBoost, setActBoost] = useState<string | null>(null);
+  const [bFb, setBFb] = useState<string | null>(null);
 
-  // ── Boost ──
-  const [activatedBoost, setActivatedBoost] = useState<string | null>(null);
-  const [boostFeedback, setBoostFeedback] = useState<string | null>(null);
+  const sym = currency === 'GEL' ? '₾' : '$';
 
-  const currencySymbol = currency === 'GEL' ? '₾' : '$';
+  useEffect(() => { if (user?.id) { getVerification().then(({data}) => setVerif(data)); fetchCards().then(({data}) => setDbCards(data || [])); } }, [user?.id]);
 
-  // Load verification + cards on mount
-  useEffect(() => {
-    if (user?.id) {
-      getVerification().then(({ data }) => setVerification(data));
-      fetchCards().then(({ data }) => setDbCards(data));
-    }
-  }, [user?.id, getVerification, fetchCards]);
+  const savePf = async () => { const {error} = await updateProfile({name: editName, phone: editPhone, bio: editBio}); if (error) setPfFb('შეცდომა: '+error); else { setUserProfile((p:any)=>({...p, name: editName})); await refreshProfile(); setPfFb('პროფილი განახლდა!'); } setTimeout(()=>setPfFb(null),3000); };
+  const pickAvatar = async (e: any) => { const f = e.target.files?.[0]; if (!f) return; const {url, error} = await uploadAvatar(f); if (error) setPfFb('ავატარის შეცდომა: '+error); else if (url) { setUserProfile((p:any)=>({...p, avatar: url})); await refreshProfile(); setPfFb('ავატარი განახლდა!'); } setTimeout(()=>setPfFb(null),3000); };
 
-  const handleSaveProfile = async () => {
-    const { error } = await updateProfile({ name: editName, phone: editPhone, bio: editBio });
-    if (error) { setProfileFeedback('შეცდომა: ' + error); }
-    else {
-      setUserProfile((prev: any) => ({ ...prev, name: editName }));
-      await refreshProfile();
-      setProfileFeedback('პროფილი განახლდა!');
-    }
-    setTimeout(() => setProfileFeedback(null), 3000);
-  };
+  const fmtCard = (e: any) => { const r = e.target.value.replace(/\D/g,''); const f = r.match(/.{1,4}/g)?.join(' ') || ''; if (f.length<=19) setCNum(f); };
+  const fmtExp = (e: any) => { const r = e.target.value.replace(/\D/g,''); let f=r; if (r.length>2) f = r.slice(0,2)+'/'+r.slice(2,4); if (f.length<=5) setCExp(f); };
+  const fmtCvc = (e: any) => { const r = e.target.value.replace(/\D/g,''); if (r.length<=3) setCCvc(r); };
 
-  const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const { url, error } = await uploadAvatar(file);
-    if (error) { setProfileFeedback('ავატარის შეცდომა: ' + error); }
-    else if (url) {
-      setUserProfile((prev: any) => ({ ...prev, avatar: url }));
-      await refreshProfile();
-      setProfileFeedback('ავატარი განახლდა!');
-    }
-    setTimeout(() => setProfileFeedback(null), 3000);
-  };
+  const addDbCard = async (e: any) => { e.preventDefault(); if (cNum.replace(/\s/g,'').length<13||cExp.length<5||cCvc.length<3) { setCFb('შეავსეთ ბარათის მონაცემები'); return; } const brand = cNum.startsWith('4')?'visa':cNum.startsWith('5')?'mastercard':'amex'; const {data,error} = await addCard({last4:cNum.slice(-4),brand,expiryMonth:cExp.split('/')[0],expiryYear:cExp.split('/')[1],cardholderName:cHold||'Cardholder'}); if (error) setCFb('შეცდომა: '+error); else { setCNum('');setCExp('');setCCvc('');setCHold(''); setCFb('ბარათი დაემატა!'); if(data) setDbCards(p=>[data,...p]); } setTimeout(()=>setCFb(null),3000); };
+  const delCard = async (id: string) => { const {error} = await deleteCard(id); if (!error) setDbCards(p=>p.filter(c=>c.id!==id)); };
+  const refill = (e: any) => { e.preventDefault(); const n=parseFloat(refAmt); if (isNaN(n)||n<=0) { setRFb('სწორი თანხა'); return; } setUserProfile((p:any)=>({...p,balance:p.balance+n})); setRFb(); setTimeout(()=>setRFb(null),3500); };
+  const submitVerif = async () => { if (!frontFile) { setVFb('ატვირთეთ ფოტო'); return; } setVFb(null); const {data,error} = await uploadDoc(docType,frontFile,backFile||undefined); if (error) setVFb('შეცდომა: '+error); else { setVerif(data); setVFb('დოკუმენტი აიტვირთა!'); setFrontFile(null); setBackFile(null); } setTimeout(()=>setVFb(null),5000); };
 
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    const formatted = raw.match(/.{1,4}/g)?.join(' ') || '';
-    if (formatted.length <= 19) setCardNumber(formatted);
-  };
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    let formatted = raw;
-    if (raw.length > 2) formatted = `${raw.slice(0, 2)}/${raw.slice(2, 4)}`;
-    if (formatted.length <= 5) setCardExpiry(formatted);
-  };
-  const handleCvcChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    if (raw.length <= 3) setCardCvc(raw);
-  };
-
-  const handleAddDbCard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (cardNumber.replace(/\s/g, '').length < 13 || cardExpiry.length < 5 || cardCvc.length < 3) {
-      setCardFeedback('გთხოვთ შეავსოთ ბარათის მონაცემები სრულყოფილად!');
-      return;
-    }
-    const brand: 'visa' | 'mastercard' | 'amex' = cardNumber.startsWith('4') ? 'visa' : cardNumber.startsWith('5') ? 'mastercard' : 'amex';
-    const { data, error } = await addCard({
-      last4: cardNumber.slice(-4),
-      brand,
-      expiryMonth: cardExpiry.split('/')[0],
-      expiryYear: cardExpiry.split('/')[1],
-      cardholderName: cardholder || 'Cardholder',
-    });
-    if (error) setCardFeedback('შეცდომა: ' + error);
-    else {
-      setCardNumber(''); setCardExpiry(''); setCardCvc(''); setCardholder('');
-      setCardFeedback('ბარათი წარმატებით დაემატა!');
-      if (data) setDbCards(prev => [data, ...prev]);
-    }
-    setTimeout(() => setCardFeedback(null), 3000);
-  };
-
-  const handleDeleteCard = async (id: string) => {
-    const { error } = await deleteCard(id);
-    if (!error) setDbCards(prev => prev.filter(c => c.id !== id));
-  };
-
-  const handleRefill = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amountNum = parseFloat(refillAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setRefillFeedback('გთხოვთ შეიყვანოთ სწორი თანხა!');
-      return;
-    }
-    setUserProfile((prev: any) => ({ ...prev, balance: prev.balance + amountNum }));
-    setRefillFeedback(`ბალანსი შეივსო ${amountNum} ₾-ით!`);
-    setTimeout(() => setRefillFeedback(null), 3500);
-  };
-
-  const handleVerificationSubmit = async () => {
-    if (!frontFile) { setVerifFeedback('გთხოვთ ატვირთოთ დოკუმენტის ფოტო'); return; }
-    setVerifFeedback(null);
-    const { data, error } = await uploadDoc(docType, frontFile, backFile || undefined);
-    if (error) setVerifFeedback('შეცდომა: ' + error);
-    else {
-      setVerification(data);
-      setVerifFeedback('დოკუმენტი წარმატებით აიტვირთა! მიმდინარეობს შემოწმება.');
-      setFrontFile(null); setBackFile(null);
-    }
-    setTimeout(() => setVerifFeedback(null), 5000);
-  };
-
-  const navItems: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'დაფა', icon: <LayoutDashboard size={15} /> },
-    { id: 'my_listings', label: 'ჩემი განცხადებები', icon: <Layers size={15} /> },
-    { id: 'boost', label: 'გაბუსთება', icon: <Zap size={15} /> },
-    { id: 'wallet', label: 'საფულე', icon: <Wallet size={15} /> },
-    { id: 'verification', label: 'ვერიფიკაცია', icon: <BadgeCheck size={15} /> },
-    { id: 'settings', label: 'პროფილი', icon: <Settings size={15} /> },
+  const nav: {id:TabId;label:string;icon:any}[] = [
+    {id:'dashboard',label:'დაფა',icon:<LayoutDashboard size={15}/>},
+    {id:'my_listings',label:'ჩემი განცხადებები',icon:<Layers size={15}/>},
+    {id:'boost',label:'გაბუსთება',icon:<Zap size={15}/>},
+    {id:'wallet',label:'საფულე',icon:<Wallet size={15}/>},
+    {id:'verification',label:'ვერიფიკაცია',icon:<BadgeCheck size={15}/>},
+    {id:'settings',label:'პროფილი',icon:<Settings size={15}/>},
   ];
 
-  const boostPlans = [
-    {
-      id: 'pro', name: 'PRO', price: 150,
-      badge: <Crown size={16} />, color: 'bg-gray-900', textColor: 'text-white',
-      borderColor: 'border-gray-900', bgLight: 'bg-gray-100',
-      features: ['განცხადება საძიებო შედეგების სათავეში','მთავარ გვერდზე ფიჩერირება','PRO BOOST ბეიჯი','30 დღე სრული ხილვადობა'],
-    },
-    {
-      id: 'normal', name: 'NORMAL', price: 60,
-      badge: <Star size={16} />, color: 'bg-violet-600', textColor: 'text-white',
-      borderColor: 'border-violet-500', bgLight: 'bg-violet-50',
-      features: ['BOOST ბეიჯი განცხადებაზე','გამოყოფილი პოზიცია ძიებაში','კვირის Top სია','30 დღე'],
-    },
-    {
-      id: 'basic', name: 'BASIC', price: 25,
-      badge: <Zap size={16} />, color: 'bg-slate-700', textColor: 'text-white',
-      borderColor: 'border-slate-400', bgLight: 'bg-slate-50',
-      features: ['მცირე ხილვადობის გაუმჯობესება','ძიებაში ოდნავ მაღალი პოზიცია','30 დღე'],
-    },
+  const boosts = [
+    {id:'pro',name:'PRO',price:150,badge:<Crown size={16}/>,color:'bg-gray-900',text:'text-white',border:'border-gray-900',features:['საძიებო შედეგების სათავეში','მთავარ გვერდზე ფიჩერირება','PRO BOOST ბეიჯი','30 დღე სრული ხილვადობა']},
+    {id:'normal',name:'NORMAL',price:60,badge:<Star size={16}/>,color:'bg-violet-600',text:'text-white',border:'border-violet-500',features:['BOOST ბეიჯი','გამოყოფილი პოზიცია','კვირის Top სია','30 დღე']},
+    {id:'basic',name:'BASIC',price:25,badge:<Zap size={16}/>,color:'bg-slate-700',text:'text-white',border:'border-slate-400',features:['ხილვადობის გაუმჯობესება','ოდნავ მაღალი პოზიცია','30 დღე']},
   ];
 
   return (
     <div className="min-h-full w-full font-sans bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-          {/* LEFT SIDEBAR */}
           <div className="lg:col-span-3 flex flex-col gap-4">
-            {/* Profile Card */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
               <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 mb-2">
-                  <img src={userProfile.avatar || ''} alt={userProfile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 mb-3">
+                  <img src={profile?.avatar_url||userProfile.avatar||''} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  {profile?.is_verified && <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5"><BadgeCheck size={14}/></div>}
                 </div>
-                <h3 className="font-semibold text-gray-900 text-[14px]">{userProfile.name || 'უცნობი'}</h3>
-                <span className="text-gray-400 text-[11px] mb-3">ID: {userProfile.userId || '—'}</span>
-
-                <div className="bg-gray-800 rounded-lg py-2.5 px-3 w-full flex items-center justify-between text-white">
-                  <div className="flex items-center gap-2 text-[11px] font-medium text-gray-300">
-                    <Wallet size={13} />
-                    <span>ბალანსი</span>
-                  </div>
-                  <span className="text-[16px] font-bold">
-                    {userProfile.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-[11px] text-gray-400">₾</span>
-                  </span>
-                </div>
+                <h3 className="font-bold text-gray-900 text-[15px]">{profile?.name||userProfile.name||'უცნობი'}</h3>
+                <p className="text-gray-400 text-[11px] mb-1">{user?.email||''}</p>
+                {profile?.is_verified ? <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-semibold border border-emerald-100">ვერიფიცირებული</span> : profile?.verification_status==='pending' ? <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold border border-amber-100">მიმდინარეობს</span> : null}
               </div>
             </div>
-
-            {/* Navigation */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1.5">
-              {[
-                { id: 'edit_profile', label: 'პროფილის რედაქტირება', icon: <User size={14} /> },
-                { id: 'my_listings', label: 'ჩემი განცხადებები', count: myListings.length, icon: <Layers size={14} /> },
-                { id: 'boost', label: 'განცხადების გაბუსთება', icon: <Zap size={14} /> },
-                { id: 'balance_refill', label: 'ბალანსის შევსება', icon: <PlusCircle size={14} /> },
-                { id: 'balance_view', label: 'ტრანზაქციები', icon: <TrendingUp size={14} /> },
-                { id: 'payment_methods', label: 'საბანკო ბარათები', icon: <CreditCard size={14} /> },
-              ].map((sub) => {
-                const isActive = activeSubTab === sub.id;
-                return (
-                  <button
-                    key={sub.id}
-                    onClick={() => setActiveSubTab(sub.id as any)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer text-[12px] font-medium ${
-                      isActive ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">{sub.icon}<span>{sub.label}</span></div>
-                    {'count' in sub && sub.count > 0 && (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                        {sub.count}
-                      </span>
-                    )}
-                    <ChevronRight size={13} className={isActive ? 'text-white/50' : 'text-gray-300'} />
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white rounded-xl border border-gray-200 p-3 text-center"><Eye size={16} className="mx-auto mb-1 text-gray-400"/><p className="text-[18px] font-black">{stats.totalProfileViews}</p><p className="text-[10px] text-gray-500">პროფილის ნახვა</p></div>
+              <div className="bg-white rounded-xl border border-gray-200 p-3 text-center"><BarChart3 size={16} className="mx-auto mb-1 text-gray-400"/><p className="text-[18px] font-black">{stats.totalListingViews}</p><p className="text-[10px] text-gray-500">განცხადების ნახვა</p></div>
             </div>
-
-            {/* Settings */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-2">
-              <p className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider">შეტყობინებები</p>
-              {[
-                { key: 'notificationsEnabled', label: 'Push შეტყობინებები' },
-                { key: 'smsEnabled', label: 'SMS შეტყობინებები' },
-              ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-[12px] font-medium text-gray-700">{label}</span>
-                  <button
-                    onClick={() => setUserProfile((prev: any) => ({ ...prev, [key]: !prev[key] }))}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
-                      userProfile[key as keyof typeof userProfile] ? 'bg-gray-800' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span className={`inline-block h-3.5 w-3.5 mt-0.5 ml-0.5 transform rounded-full bg-white shadow transition duration-200 ${
-                      userProfile[key as keyof typeof userProfile] ? 'translate-x-3.5' : 'translate-x-0'
-                    }`} />
-                  </button>
-                </div>
-              ))}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1.5">
+              {nav.map(sub=>{const a=activeTab===sub.id; return (
+                <button key={sub.id} onClick={()=>setActiveTab(sub.id)} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all cursor-pointer text-[12px] font-medium ${a?'bg-gray-900 text-white shadow-sm':'text-gray-600 hover:bg-gray-50'}`}>
+                  <div className="flex items-center gap-2">{sub.icon}<span>{sub.label}</span></div>
+                  <ChevronRight size={13} className={a?'text-white/50':'text-gray-300'} />
+                </button>
+              );})}
             </div>
           </div>
 
-          {/* RIGHT CONTENT */}
           <div className="lg:col-span-9 flex flex-col gap-5">
-
-          {/* Subtab: Edit Profile */}
-          {activeSubTab === 'edit_profile' && (
-            <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-              <h4 className="font-semibold text-[14px] text-gray-900 mb-4 border-b border-gray-100 pb-3">პროფილის რედაქტირება</h4>
-
-              {/* Avatar picker */}
-              <div className="flex items-center gap-4 mb-5">
-                <div className="relative group">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200">
-                    {(profile?.avatar_url || userProfile.avatar) ? (
-                      <img src={profile?.avatar_url || userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                        <User size={24} className="text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-800 hover:bg-gray-700 text-white rounded-full flex items-center justify-center shadow cursor-pointer transition-colors disabled:opacity-60"
-                  >
-                    {uploadingAvatar ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
-                  </button>
-                  <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} />
+            {activeTab==='dashboard' && (
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[{l:'დღევანდელი ნახვები',v:stats.todayProfileViews+stats.todayListingViews,i:<Eye size={16}/>},{l:'განცხადებები',v:myListings.length,i:<Layers size={16}/>},{l:'ბალანსი',v:userProfile.balance.toFixed(2)+' ₾',i:<Wallet size={16}/>},{l:'შეტყობინებები',v:0,i:<Bell size={16}/>}].map((s,i)=>(
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center gap-2 text-gray-400 mb-2">{s.i}<span className="text-[11px] font-medium">{s.l}</span></div><p className="text-[20px] font-black">{s.v}</p></div>
+                  ))}
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-[13px]">{profile?.name || userProfile.name || 'სახელი'}</p>
-                  <p className="text-gray-400 text-[11px]">{user?.email || '—'}</p>
-                  <button
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="text-[11px] text-blue-600 hover:underline cursor-pointer mt-1"
-                  >
-                    ფოტოს შეცვლა
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-3 max-w-md">
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-500 mb-1">სახელი და გვარი</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    placeholder="სახელი გვარი"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[13px] text-gray-900 focus:outline-none focus:border-gray-800 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-500 mb-1">ტელეფონი</label>
-                  <input
-                    type="tel"
-                    value={editPhone}
-                    onChange={e => setEditPhone(e.target.value)}
-                    placeholder="599 XX XX XX"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[13px] text-gray-900 focus:outline-none focus:border-gray-800 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-500 mb-1">ელ-ფოსტა</label>
-                  <input
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="w-full bg-gray-100 border border-gray-200 rounded-lg py-2 px-3 text-[13px] text-gray-400 cursor-not-allowed"
-                  />
-                </div>
-
-                {profileFeedback && (
-                  <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-medium ${
-                    profileFeedback.startsWith('შეცდომა') ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
-                  }`}>
-                    {profileFeedback.startsWith('შეცდომა') ? '✕' : '✓'} {profileFeedback}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium px-4 py-2 rounded-lg text-[12px] cursor-pointer transition-colors disabled:opacity-60"
-                >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  შენახვა
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Subtab: My Listings */}
-          {activeSubTab === 'my_listings' && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
-                <div>
-                  <h4 className="font-semibold text-[14px] text-gray-900">ჩემი განცხადებები</h4>
-                  <p className="text-gray-500 text-[11px] mt-0.5">პორტალზე განთავსებული ქონება</p>
-                </div>
-                <button
-                  onClick={onAddListingClick}
-                  className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-md font-medium text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
-                >
-                  <Plus size={12} />
-                  <span>განცხადება</span>
-                </button>
-              </div>
-
-              {myListings.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">
-                  <Layers size={32} className="mx-auto mb-2 opacity-20 text-gray-700" />
-                  <p className="font-medium text-[12px] text-gray-900">განცხადება არ არის</p>
-                  <p className="text-[11px] mt-1">დაამატეთ პირველი განცხადება</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {myListings.map((listing) => {
-                    const priceFormatted = (currency === 'GEL' ? listing.priceLari : listing.priceUsd).toLocaleString();
-                    return (
-                      <div key={listing.id} className="border border-gray-200 rounded-lg p-3 flex items-center gap-3 hover:border-gray-300 hover:bg-gray-50/50 transition-all">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-gray-50 border border-gray-200">
-                          <img src={listing.image} alt="housing" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                  <h4 className="font-bold text-[14px] mb-4">ბოლო მნახველები</h4>
+                  {stats.recentViewers.length===0 ? <p className="text-[12px] text-gray-400">ჯერ არავინ გინახავთ</p> : (
+                    <div className="flex flex-wrap gap-3">
+                      {stats.recentViewers.slice(0,10).map((v,i)=>(
+                        <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                          <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">{v.viewer_avatar?<img src={v.viewer_avatar} className="w-full h-full object-cover"/>:<User size={12} className="m-1 text-gray-400"/>}</div>
+                          <span className="text-[11px] font-medium">{v.viewer_name||'უცნობი'}</span>
+                          <span className="text-[10px] text-gray-400">{new Date(v.viewed_at).toLocaleDateString('ka-GE')}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h5 className="font-medium text-gray-900 text-[12px] line-clamp-1">{listing.title}</h5>
-                          <span className="text-gray-700 font-semibold text-[13px]">{priceFormatted} {currencySymbol}</span>
-                          <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5">
-                            <MapPin size={9} />
-                            <span>{listing.district}, {listing.city}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Subtab: Boost Post */}
-          {activeSubTab === 'boost' && (
-            <div className="space-y-4">
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <div className="mb-5">
-                  <h4 className="font-bold text-[15px] text-gray-900">განცხადების გაბუსთება</h4>
-                  <p className="text-[12px] text-gray-500 mt-1">30 დღის განმავლობაში გაზარდეთ თქვენი განცხადების ხილვადობა. ყველა პაკეტი ძალაში შედის გადახდის დღიდან.</p>
-                </div>
-
-                {boostFeedback && (
-                  <div className="mb-4 flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-[12px] font-semibold">
-                    <CheckCircle size={15} />
-                    {boostFeedback}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {boostPlans.map((plan) => {
-                    const isActive = activatedBoost === plan.id;
-                    const canAfford = userProfile.balance >= plan.price;
-                    return (
-                      <div
-                        key={plan.id}
-                        className={`relative rounded-xl border-2 p-5 flex flex-col transition-all ${
-                          isActive
-                            ? `${plan.borderColor} shadow-lg`
-                            : 'border-gray-200 hover:border-gray-400'
-                        }`}
-                      >
-                        {plan.id === 'pro' && (
-                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow">
-                            პოპულარული
-                          </div>
-                        )}
-
-                        <div className={`w-10 h-10 rounded-xl ${plan.color} flex items-center justify-center text-white mb-3`}>
-                          {plan.badge}
-                        </div>
-
-                        <div className="mb-1">
-                          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{plan.name}</span>
-                        </div>
-                        <div className="flex items-baseline gap-1 mb-4">
-                          <span className="text-[28px] font-black text-gray-900 leading-none">{plan.price}</span>
-                          <span className="text-gray-700 font-bold text-sm">₾</span>
-                          <span className="text-gray-500 text-[11px] font-medium">/ 30 დღე</span>
-                        </div>
-
-                        <ul className="space-y-2 mb-5 flex-1">
-                          {plan.features.map((f, i) => (
-                            <li key={i} className="flex items-start gap-2 text-[11px] text-gray-900 font-medium">
-                              <Check size={12} className="text-gray-700 mt-0.5 shrink-0" />
-                              {f}
-                            </li>
-                          ))}
-                        </ul>
-
-                        <button
-                          onClick={() => {
-                            if (!canAfford) {
-                              setBoostFeedback(`ბალანსი არ არის საკმარისი. საჭიროა ${plan.price} ₾`);
-                              setTimeout(() => setBoostFeedback(null), 3500);
-                              return;
-                            }
-                            setUserProfile((prev: any) => ({ ...prev, balance: prev.balance - plan.price }));
-                            setActivatedBoost(plan.id);
-                            setBoostFeedback(`${plan.name} პაკეტი წარმატებით გააქტიურდა! 30 დღე.`);
-                            setTimeout(() => setBoostFeedback(null), 4000);
-                          }}
-                          disabled={isActive}
-                          className={`w-full py-2.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                            isActive
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
-                              : canAfford
-                              ? `${plan.color} ${plan.textColor} hover:opacity-90`
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {isActive ? (
-                            <><CheckCircle size={14} /> გააქტიურებულია</>
-                          ) : (
-                            <><ArrowRight size={14} /> {plan.price} ₾ — გააქტიურება</>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-[11px] text-gray-500 flex items-start gap-3">
-                <ShieldCheck size={16} className="text-gray-700 shrink-0 mt-0.5" />
-                <span>ბუსთი ავტომატურად გამოირთვება 30 დღის შემდეგ. თანხა ჩამოიჭრება თქვენი პორტალის ბალანსიდან. ბალანსი შეგიძლიათ შეავსოთ «ბალანსის შევსება» სექციაში.</span>
-              </div>
-            </div>
-          )}
-
-          {/* Subtab: Refill balance */}
-          {activeSubTab === 'balance_refill' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <h4 className="font-bold text-[15px] text-gray-900 mb-4 border-b border-gray-200 pb-3">ბალანსის შევსება</h4>
-
-                <form onSubmit={handleRefillDeposit} className="space-y-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1.5" htmlFor="amount-input">თანხა (₾)</label>
-                    <input
-                      id="amount-input"
-                      type="number" min="5" max="5000"
-                      value={refillAmount}
-                      onChange={(e) => setRefillAmount(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3.5 font-semibold text-gray-900 focus:outline-none focus:border-gray-900 text-[13px]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1.5" htmlFor="card-refill-select">ბარათი</label>
-                    <select
-                      id="card-refill-select"
-                      value={selectedCardId}
-                      onChange={(e) => setSelectedCardId(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 font-semibold text-gray-900 focus:outline-none focus:border-gray-900 text-[13px]"
-                    >
-                      {paymentCards.map((card) => (
-                        <option key={card.id} value={card.id}>{card.type.toUpperCase()}: {card.number}</option>
                       ))}
-                    </select>
-                  </div>
-
-                  {formFeedback && (
-                    <p className="text-[12px] font-semibold p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">{formFeedback}</p>
+                    </div>
                   )}
-
-                  <button type="submit" className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-lg font-bold text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-all">
-                    <Wallet size={14} />
-                    <span>შევსება</span>
-                  </button>
-                </form>
-
-                <div className="mt-4 flex items-center gap-2 justify-center text-[11px] text-gray-500 border-t border-gray-200 pt-3">
-                  <ShieldCheck size={13} className="text-emerald-500" />
-                  <span>SSL დაცული გადახდა</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button onClick={onAddListingClick} className="bg-gray-900 text-white rounded-xl p-4 text-left hover:bg-gray-800 cursor-pointer"><Plus size={20} className="mb-2"/><p className="font-bold text-[13px]">განცხადების დამატება</p><p className="text-[11px] text-gray-300 mt-0.5">ახალი უძრავი ქონება</p></button>
+                  <button onClick={()=>setActiveTab('wallet')} className="bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-400 cursor-pointer"><Wallet size={20} className="mb-2 text-gray-400"/><p className="font-bold text-[13px]">ბალანსის შევსება</p></button>
+                  <button onClick={()=>setActiveTab('boost')} className="bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-400 cursor-pointer"><Zap size={20} className="mb-2 text-gray-400"/><p className="font-bold text-[13px]">განცხადების ბუსთი</p></button>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-3">
-                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">ბარათები ({paymentCards.length})</p>
-                {paymentCards.map((card) => (
-                  <div key={card.id} className="bg-white border border-gray-200 rounded-xl p-3.5 flex justify-between items-center shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-lg">💳</div>
-                      <div>
-                        <div className="font-bold text-gray-900 text-[12px]">{card.number}</div>
-                        <div className="text-[10px] text-gray-500 uppercase">{card.cardholder}</div>
+            {activeTab==='my_listings' && (
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                  <div><h4 className="font-bold text-[14px]">ჩემი განცხადებები</h4><p className="text-gray-500 text-[11px] mt-0.5">პორტალზე განთავსებული ქონება</p></div>
+                  <button onClick={onAddListingClick} className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-1.5 rounded-lg font-medium text-[11px] flex items-center gap-1.5 cursor-pointer"><Plus size={12}/><span>განცხადება</span></button>
+                </div>
+                {myListings.length===0 ? <div className="text-center py-10"><Layers size={32} className="mx-auto mb-2 opacity-20 text-gray-700"/><p className="font-medium text-[12px]">განცხადება არ არის</p></div> : (
+                  <div className="space-y-2">
+                    {myListings.map(l=>{ const p=(currency==='GEL'?l.priceLari:l.priceUsd).toLocaleString(); return (
+                      <div key={l.id} className="border border-gray-200 rounded-xl p-3 flex items-center gap-3 hover:border-gray-300 transition-all">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-gray-50 border border-gray-200"><img src={l.image} className="w-full h-full object-cover" referrerPolicy="no-referrer"/></div>
+                        <div className="flex-1 min-w-0"><h5 className="font-semibold text-[13px] line-clamp-1">{l.title}</h5><span className="text-gray-700 font-bold text-[13px]">{p} {sym}</span><div className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><MapPin size={9}/><span>{l.district},{l.city}</span></div></div>
+                        <div className="text-right shrink-0"><div className="flex items-center gap-1 text-[11px] text-gray-500"><Eye size={12}/><span>{l.viewCount||0} ნახვა</span></div>{l.vipStatus!=='standard'&&<span className="text-[10px] bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded font-bold">{l.vipStatus}</span>}</div>
+                      </div>
+                    );})}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab==='boost' && (
+              <div className="space-y-4">
+                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                  <div className="mb-5"><h4 className="font-bold text-[15px]">განცხადების გაბუსთება</h4><p className="text-[12px] text-gray-500 mt-1">30 დღის განმავლობაში გაზარდეთ ხილვადობა.</p></div>
+                  {bFb && <div className="mb-4 flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-[12px] font-semibold"><CheckCircle size={15}/>{bFb}</div>}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {boosts.map(plan=>{ const a=actBoost===plan.id; const ok=userProfile.balance>=plan.price; return (
+                      <div key={plan.id} className={`relative rounded-xl border-2 p-5 flex flex-col transition-all ${a?plan.border+' shadow-lg':'border-gray-200 hover:border-gray-400'}`}>
+                        {plan.id==='pro'&&<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow">პოპულარული</div>}
+                        <div className={`w-10 h-10 rounded-xl ${plan.color} flex items-center justify-center text-white mb-3`}>{plan.badge}</div>
+                        <div className="mb-1"><span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{plan.name}</span></div>
+                        <div className="flex items-baseline gap-1 mb-4"><span className="text-[28px] font-black leading-none">{plan.price}</span><span className="font-bold text-sm">₾</span><span className="text-gray-500 text-[11px]">/30 დღე</span></div>
+                        <ul className="space-y-2 mb-5 flex-1">{plan.features.map((f,i)=>(<li key={i} className="flex items-start gap-2 text-[11px] font-medium"><Check size={12} className="mt-0.5 shrink-0"/>{f}</li>))}</ul>
+                        <button onClick={()=>{if(!ok){setBFb(`ბალანსი არ არის. საჭიროა ${plan.price} ₾`); setTimeout(()=>setBFb(null),3500); return;} setUserProfile((p:any)=>({...p,balance:p.balance-plan.price})); setActBoost(plan.id); setBFb(`${plan.name} გააქტიურდა!`); setTimeout(()=>setBFb(null),4000);}} disabled={a} className={`w-full py-2.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${a?'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default':ok?plan.color+' '+plan.text+' hover:opacity-90':'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>{a?<><CheckCircle size={14}/> გააქტიურებულია</>:<><ArrowRight size={14}/> {plan.price} ₾</>}</button>
+                      </div>
+                    );})}
+                  </div>
+                </div>
+                <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-[11px] text-gray-500 flex items-start gap-3"><ShieldCheck size={16} className="shrink-0 mt-0.5"/><span>ბუსთი ავტომატურად გამოირთვება 30 დღის შემდეგ.</span></div>
+              </div>
+            )}
+
+            {activeTab==='wallet' && (
+              <div className="space-y-5">
+                <div className="bg-gray-900 rounded-2xl p-6 text-white">
+                  <p className="text-gray-400 text-[12px] font-medium mb-1">მიმდინარე ბალანსი</p>
+                  <p className="text-[36px] font-black tracking-tight">{userProfile.balance.toLocaleString('en-US',{minimumFractionDigits:2})} ₾</p>
+                  <button className="bg-white text-gray-900 px-4 py-2 rounded-lg text-[12px] font-bold mt-4 cursor-pointer">შევსება</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                    <h4 className="font-bold text-[14px] mb-4">ბალანსის შევსება</h4>
+                    <form onSubmit={refill} className="space-y-4">
+                      <div><label className="block text-[11px] font-semibold text-gray-500 mb-1.5">თანხა (₾)</label><input type="number" min="5" max="5000" value={refAmt} onChange={e=>setRefAmt(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3.5 font-semibold text-[13px] focus:outline-none focus:border-gray-900"/></div>
+                      {rFb && <p className="text-[12px] font-semibold p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">{rFb}</p>}
+                      <button type="submit" className="w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-lg font-bold text-[13px] flex items-center justify-center gap-2 cursor-pointer"><Wallet size={14}/><span>შევსება</span></button>
+                    </form>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                    <h4 className="font-bold text-[14px] mb-4">საბანკო ბარათები ({dbCards.length})</h4>
+                    <div className="space-y-2 mb-4">
+                      {dbCards.map(card=>(
+                        <div key={card.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-100">
+                          <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gray-200 flex items-center justify-center text-lg">💳</div><div><p className="font-bold text-[12px]">•••• {card.last4}</p><p className="text-[10px] text-gray-500 uppercase">{card.cardholder_name}</p></div></div>
+                          <div className="flex items-center gap-2"><span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold uppercase">{card.brand}</span><button onClick={()=>delCard(card.id)} className="text-gray-400 hover:text-red-500 cursor-pointer"><Trash2 size={14}/></button></div>
+                        </div>
+                      ))}
+                      {dbCards.length===0 && <p className="text-[12px] text-gray-400 text-center py-3">ბარათები არ არის</p>}
+                    </div>
+                    <form onSubmit={addDbCard} className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="text" value={cNum} onChange={fmtCard} placeholder="4242 4242 4242 4242" className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[12px] focus:outline-none focus:border-gray-900"/>
+                        <input type="text" value={cHold} onChange={e=>setCHold(e.target.value)} placeholder="მფლობელი" className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[12px] focus:outline-none focus:border-gray-900"/>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="text" value={cExp} onChange={fmtExp} placeholder="MM/YY" className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[12px] text-center focus:outline-none focus:border-gray-900"/>
+                        <input type="password" value={cCvc} onChange={fmtCvc} placeholder="CVC" className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[12px] text-center focus:outline-none focus:border-gray-900"/>
+                      </div>
+                      {cFb && <p className="text-[11px] font-semibold p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">{cFb}</p>}
+                      <button type="submit" className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 py-2 rounded-lg font-bold text-[12px] cursor-pointer">+ ბარათის დამატება</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab==='verification' && (
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <h4 className="font-bold text-[14px] mb-4">ID ვერიფიკაცია</h4>
+                {verif?.status==='approved' ? (
+                  <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4"><BadgeCheck size={24} className="text-emerald-600"/><div><p className="font-bold text-[13px] text-emerald-700">ვერიფიცირებული</p><p className="text-[11px] text-emerald-600">ანგარიში წარმატებით დადასტურებულია.</p></div></div>
+                ) : verif?.status==='pending' ? (
+                  <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4"><Clock size={24} className="text-amber-600"/><div><p className="font-bold text-[13px] text-amber-700">მიმდინარეობს შემოწმება</p><p className="text-[11px] text-amber-600">დოკუმენტი გადაგზავნილია. დაელოდეთ.</p></div></div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4"><AlertCircle size={24} className="text-gray-400"/><div><p className="font-bold text-[13px]">ვერიფიკაცია არ არის</p><p className="text-[11px] text-gray-500">ატვირთეთ პირადობის დოკუმენტი.</p></div></div>
+                    <div><label className="block text-[11px] font-semibold text-gray-500 mb-1.5">დოკუმენტის ტიპი</label>
+                      <select value={docType} onChange={e=>setDocType(e.target.value as DocType)} className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[13px] focus:outline-none focus:border-gray-900">
+                        <option value="id_card">პირადობის მოწმობა</option><option value="passport">პასპორტი</option><option value="license">მართვის მოწმობა</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><label className="block text-[11px] font-semibold text-gray-500 mb-1.5">წინა მხარე</label>
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-gray-500 bg-gray-50">
+                          {frontFile?<div className="text-center"><FileText size={20} className="mx-auto mb-1 text-gray-600"/><span className="text-[11px] text-gray-700">{frontFile.name}</span></div>:<div className="text-center"><Upload size={20} className="mx-auto mb-1 text-gray-400"/><span className="text-[11px] text-gray-400">ატვირთე ფოტო</span></div>}
+                          <input type="file" accept="image/*" className="hidden" onChange={e=>setFrontFile(e.target.files?.[0]||null)}/>
+                        </label>
+                      </div>
+                      <div><label className="block text-[11px] font-semibold text-gray-500 mb-1.5">უკანა მხარე</label>
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-gray-500 bg-gray-50">
+                          {backFile?<div className="text-center"><FileText size={20} className="mx-auto mb-1 text-gray-600"/><span className="text-[11px] text-gray-700">{backFile.name}</span></div>:<div className="text-center"><Upload size={20} className="mx-auto mb-1 text-gray-400"/><span className="text-[11px] text-gray-400">ატვირთე ფოტო</span></div>}
+                          <input type="file" accept="image/*" className="hidden" onChange={e=>setBackFile(e.target.files?.[0]||null)}/>
+                        </label>
                       </div>
                     </div>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md font-bold uppercase">{card.type}</span>
+                    {vFb && <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-medium ${vFb.startsWith('შეცდომა')?'bg-red-50 border border-red-200 text-red-700':'bg-emerald-50 border border-emerald-200 text-emerald-700'}`}>{vFb.startsWith('შეცდომა')?'✕':'✓'} {vFb}</div>}
+                    <button onClick={submitVerif} disabled={!frontFile} className="w-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white py-2.5 rounded-lg font-bold text-[13px] cursor-pointer">დოკუმენტის გაგზავნა</button>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Subtab: Add Payment Cards */}
-          {activeSubTab === 'payment_methods' && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h4 className="font-bold text-[15px] text-gray-900 mb-4 border-b border-gray-200 pb-3">საბანკო ბარათის დამატება</h4>
-              
-              <form onSubmit={handleAddCard} className="space-y-4 max-w-md">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1.5" htmlFor="profile-card-number">ბარათის ნომერი</label>
-                    <input id="profile-card-number" type="text" value={cardNumber} onChange={handleCardNumberChange}
-                      placeholder="4242 4242 •••• ••••"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 font-semibold text-gray-900 text-[13px] focus:outline-none focus:border-gray-900" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1.5" htmlFor="profile-cardholder">ბარათის მფლობელი</label>
-                    <input id="profile-cardholder" type="text" value={cardholder} onChange={(e) => setCardholder(e.target.value)}
-                      placeholder="FULL NAME"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 font-semibold text-gray-900 text-[13px] focus:outline-none focus:border-gray-900 uppercase" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1.5" htmlFor="profile-card-expiry">ვადა (MM/YY)</label>
-                    <input id="profile-card-expiry" type="text" value={cardExpiry} onChange={handleExpiryChange}
-                      placeholder="MM/YY"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 font-semibold text-gray-900 text-[13px] text-center focus:outline-none focus:border-gray-900" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-500 mb-1.5" htmlFor="profile-card-cvc">CVC</label>
-                    <input id="profile-card-cvc" type="password" value={cardCvc} onChange={handleCvcChange}
-                      placeholder="•••"
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 font-semibold text-gray-900 text-[13px] text-center focus:outline-none focus:border-gray-900" />
-                  </div>
-                </div>
-
-                {formFeedback && <p className="text-[12px] font-semibold p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">{formFeedback}</p>}
-
-                <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2.5 rounded-lg font-bold text-[13px] transition-all cursor-pointer">
-                  ბარათის დამატება
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Subtab: Transaction History */}
-          {activeSubTab === 'balance_view' && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
-              <div className="border-b border-gray-200 pb-3">
-                <h4 className="font-bold text-[15px] text-gray-900">ტრანზაქციების ისტორია</h4>
-                <p className="text-gray-500 text-[11px] mt-0.5">ბალანსის შევსებისა და ბუსთის ოპერაციები</p>
-              </div>
-
-              <div className="space-y-2">
-                {[
-                  { label: 'ბალანსის შევსება — VISA', sub: 'დღეს 12:40 • VISA *4242', amount: '+50.00 ₾', positive: true },
-                  { label: 'სისტემური საწყისი კრედიტი', sub: '28 მაისი • INITIAL', amount: '+300.50 ₾', positive: true },
-                ].map((tx, i) => (
-                  <div key={i} className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                        tx.positive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'
-                      }`}>{tx.positive ? '↑' : '↓'}</div>
-                      <div>
-                        <p className="font-semibold text-gray-900 text-[12px]">{tx.label}</p>
-                        <p className="text-[10px] text-gray-500">{tx.sub}</p>
-                      </div>
+            {activeTab==='settings' && (
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <h4 className="font-bold text-[14px] mb-4">პროფილის რედაქტირება</h4>
+                <div className="flex items-center gap-4 mb-5">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200">
+                      {(profile?.avatar_url||userProfile.avatar)?<img src={profile?.avatar_url||userProfile.avatar} className="w-full h-full object-cover"/>:<div className="w-full h-full bg-gray-100 flex items-center justify-center"><User size={24} className="text-gray-400"/></div>}
                     </div>
-                    <span className={`font-black text-[13px] font-mono ${
-                      tx.positive ? 'text-emerald-600' : 'text-red-500'
-                    }`}>{tx.amount}</span>
+                    <button onClick={()=>avatarRef.current?.click()} disabled={uploadingAvatar} className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-800 text-white rounded-full flex items-center justify-center shadow cursor-pointer disabled:opacity-60">{uploadingAvatar?<Loader2 size={12} className="animate-spin"/>:<Camera size={12}/>}</button>
+                    <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={pickAvatar}/>
                   </div>
-                ))}
+                  <div><p className="font-medium text-[13px]">{profile?.name||userProfile.name||'სახელი'}</p><p className="text-gray-400 text-[11px]">{user?.email||'—'}</p></div>
+                </div>
+                <div className="space-y-3 max-w-md">
+                  <div><label className="block text-[11px] font-medium text-gray-500 mb-1">სახელი</label><input type="text" value={editName} onChange={e=>setEditName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[13px] focus:outline-none focus:border-gray-800"/></div>
+                  <div><label className="block text-[11px] font-medium text-gray-500 mb-1">ტელეფონი</label><input type="tel" value={editPhone} onChange={e=>setEditPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[13px] focus:outline-none focus:border-gray-800"/></div>
+                  <div><label className="block text-[11px] font-medium text-gray-500 mb-1">ბიოგრაფია</label><textarea value={editBio} onChange={e=>setEditBio(e.target.value)} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-[13px] focus:outline-none focus:border-gray-800 resize-none"></textarea></div>
+                  <div><label className="block text-[11px] font-medium text-gray-500 mb-1">ელ-ფოსტა</label><input type="email" value={user?.email||''} disabled className="w-full bg-gray-100 border border-gray-200 rounded-lg py-2 px-3 text-[13px] text-gray-400 cursor-not-allowed"/></div>
+                  {pfFb && <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-medium ${pfFb.startsWith('შეცდომა')?'bg-red-50 border border-red-200 text-red-700':'bg-emerald-50 border border-emerald-200 text-emerald-700'}`}>{pfFb.startsWith('შეცდომა')?'✕':'✓'} {pfFb}</div>}
+                  <button onClick={savePf} disabled={saving} className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-medium px-4 py-2 rounded-lg text-[12px] cursor-pointer disabled:opacity-60">{saving?<Loader2 size={14} className="animate-spin"/>:<Save size={14}/>}შენახვა</button>
+                </div>
               </div>
+            )}
 
-              <div className="bg-gray-100 border border-gray-200 rounded-xl p-3.5 text-[12px] text-gray-500">
-                ბალანსი გამოიყენება <span className="font-bold text-gray-700">PRO</span>, <span className="font-bold text-gray-700">NORMAL</span> ან <span className="font-bold text-gray-700">BASIC</span> ბუსთ-პაკეტების შესაძენად.
-              </div>
-            </div>
-          )}
-
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }

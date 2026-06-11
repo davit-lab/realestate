@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS messages (
   chat_id       UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id     UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   content       TEXT NOT NULL DEFAULT '',
+  image_url     TEXT,
   is_read       BOOLEAN NOT NULL DEFAULT false,
   status        TEXT CHECK (status IN ('pending', 'sent', 'failed')) DEFAULT 'pending',
   created_at    TIMESTAMPTZ DEFAULT NOW()
@@ -81,6 +82,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS "trg_update_conversation_last_message" ON messages;
 CREATE TRIGGER trg_update_conversation_last_message
   AFTER INSERT ON messages
   FOR EACH ROW
@@ -99,6 +101,40 @@ BEGIN;
   END $$;
 COMMIT;
 
--- Add tables to realtime publication
-ALTER PUBLICATION supabase_realtime ADD TABLE messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+-- Add tables to realtime publication (safe)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'messages'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.messages';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'conversations'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations';
+  END IF;
+END $$;
+
+-- 8. Storage bucket for chat images
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('chat-images', 'chat-images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+-- 9. Storage RLS — allow participants to upload/read their own chat images
+CREATE POLICY "Allow participants to upload chat images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'chat-images' AND
+  EXISTS (
+    SELECT 1 FROM conversations c
+    WHERE c.id = (storage.foldername(name))[1]::uuid
+      AND (c.buyer_id = auth.uid() OR c.agent_id = auth.uid())
+  )
+);
+
+CREATE POLICY "Allow anyone to read chat images"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'chat-images');

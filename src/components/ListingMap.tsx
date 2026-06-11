@@ -24,10 +24,12 @@ export default function ListingMap({ listing, currency }: ListingMapProps) {
         ? `${Math.round(price / 1_000)}K${sym}`
         : `${price}${sym}`;
 
+  const pinWidth = Math.max(64, priceStr.length * 7 + 28);
   const pin = L.divIcon({
     className: '',
-    html: `<div style="background:#6D28D9;color:#fff;padding:5px 11px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 10px rgba(109,40,217,0.45);border:2px solid rgba(255,255,255,0.5)">${priceStr}</div>`,
-    iconAnchor: [priceStr.length * 4 + 8, 16],
+    html: `<div style="background:#111827;color:#fff;padding:7px 16px;border-radius:9999px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.25);border:2px solid #fff;font-family:system-ui,sans-serif;letter-spacing:0.02em;display:inline-block;">${priceStr}</div>`,
+    iconSize: [pinWidth, 34],
+    iconAnchor: [pinWidth / 2, 34],
   });
 
   return (
@@ -64,7 +66,7 @@ export default function ListingMap({ listing, currency }: ListingMapProps) {
                 {listing.location && (
                   <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6 }}>{listing.location}</div>
                 )}
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#6D28D9' }}>{priceStr}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#111827' }}>{priceStr}</div>
               </div>
             </Popup>
           </Marker>

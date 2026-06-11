@@ -6,6 +6,7 @@ export interface ChatMessage {
   chat_id: string;
   sender_id: string | null;
   content: string;
+  image_url?: string | null;
   is_read: boolean;
   status: 'pending' | 'sent' | 'failed';
   created_at: string;
@@ -78,7 +79,8 @@ export function useChat({ chatId, currentUserId }: UseChatOptions) {
               (m) =>
                 m.status === 'pending' &&
                 m.sender_id === newMsg.sender_id &&
-                m.content === newMsg.content
+                m.content === newMsg.content &&
+                m.image_url === newMsg.image_url
             );
 
             if (pendingIdx !== -1) {
@@ -152,9 +154,24 @@ export function useChat({ chatId, currentUserId }: UseChatOptions) {
     [chatId]
   );
 
+  // ── Upload image to Supabase Storage ──
+  const uploadImage = useCallback(
+    async (file: File): Promise<string> => {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${chatId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upError } = await supabase.storage
+        .from('chat-images')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upError) throw upError;
+      const { data: pubData } = supabase.storage.from('chat-images').getPublicUrl(path);
+      return pubData.publicUrl;
+    },
+    [chatId]
+  );
+
   // ── Optimistic send ──
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, imageUrl?: string | null) => {
       const tempId = `opt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const now = new Date().toISOString();
 
@@ -163,6 +180,7 @@ export function useChat({ chatId, currentUserId }: UseChatOptions) {
         chat_id: chatId,
         sender_id: currentUserId,
         content: content.trim(),
+        image_url: imageUrl || null,
         is_read: false,
         status: 'pending',
         created_at: now,
@@ -172,14 +190,17 @@ export function useChat({ chatId, currentUserId }: UseChatOptions) {
       setMessages((prev) => [...prev, optimistic]);
 
       try {
+        const insertPayload: Record<string, unknown> = {
+          chat_id: chatId,
+          sender_id: currentUserId,
+          content: content.trim(),
+          status: 'sent',
+        };
+        if (imageUrl) insertPayload.image_url = imageUrl;
+
         const { data, error } = await supabase
           .from('messages')
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            content: content.trim(),
-            status: 'sent',
-          })
+          .insert(insertPayload)
           .select()
           .single();
 
@@ -215,14 +236,17 @@ export function useChat({ chatId, currentUserId }: UseChatOptions) {
       );
 
       try {
+        const insertPayload: Record<string, unknown> = {
+          chat_id: failedMsg.chat_id,
+          sender_id: failedMsg.sender_id,
+          content: failedMsg.content,
+          status: 'sent',
+        };
+        if (failedMsg.image_url) insertPayload.image_url = failedMsg.image_url;
+
         const { data, error } = await supabase
           .from('messages')
-          .insert({
-            chat_id: failedMsg.chat_id,
-            sender_id: failedMsg.sender_id,
-            content: failedMsg.content,
-            status: 'sent',
-          })
+          .insert(insertPayload)
           .select()
           .single();
 
@@ -270,5 +294,6 @@ export function useChat({ chatId, currentUserId }: UseChatOptions) {
     retryMessage,
     markRead,
     broadcastTyping,
+    uploadImage,
   };
 }
