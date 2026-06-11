@@ -600,11 +600,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* ── Market Stats ── */}
-            <ScrollReveal>
-              <MarketStats listings={filteredListings} currency={currency} />
-            </ScrollReveal>
-
             {/* ── Results ── */}
             <div id="results-section" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
               <div className="flex flex-col lg:flex-row gap-6 items-start">
