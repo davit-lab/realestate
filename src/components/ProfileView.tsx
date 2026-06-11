@@ -1,28 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Wallet,
-  PlusCircle,
-  CreditCard,
-  Layers,
-  ChevronRight,
-  ShieldCheck,
-  User,
-  Plus,
-  TrendingUp,
-  CheckCircle,
-  Zap,
-  Star,
-  Crown,
-  MapPin,
-  ArrowRight,
-  Check,
-  Camera,
-  Loader2,
-  Save
+  Wallet, PlusCircle, CreditCard, Layers, ChevronRight, ShieldCheck,
+  User, Plus, TrendingUp, CheckCircle, Zap, Star, Crown, MapPin,
+  ArrowRight, Check, Camera, Loader2, Save, LayoutDashboard, Eye,
+  BadgeCheck, AlertCircle, Clock, FileText, Trash2, Star as DefaultIcon,
+  Settings, Bell, Phone, Mail, BarChart3, Upload
 } from 'lucide-react';
-import { PaymentCard, Listing } from '../types';
+import { PaymentCard, Listing, PaymentCardDB, ProfileVerification, DocType } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
+import { useViewStats } from '../hooks/useViewStats';
+import { useVerification } from '../hooks/useVerification';
+import { usePaymentCards } from '../hooks/usePaymentCards';
 
 interface ProfileViewProps {
   userProfile: {
@@ -44,7 +33,7 @@ interface ProfileViewProps {
 export default function ProfileView({
   userProfile,
   setUserProfile,
-  paymentCards,
+  paymentCards: localPaymentCards,
   setPaymentCards,
   myListings,
   onAddListingClick,
@@ -52,14 +41,56 @@ export default function ProfileView({
 }: ProfileViewProps) {
   const { user, profile, refreshProfile } = useAuth();
   const { updateProfile, uploadAvatar, saving, uploadingAvatar } = useProfile(user?.id);
+  const { stats, loading: statsLoading, refetch: refetchStats } = useViewStats(user?.id);
+  const { getVerification, uploadDoc, uploading: verifyingUpload } = useVerification(user?.id);
+  const { fetchCards, addCard, deleteCard, setDefaultCard, loading: cardsLoading } = usePaymentCards(user?.id);
 
+  // ── Tabs ──
+  type TabId = 'dashboard' | 'my_listings' | 'boost' | 'wallet' | 'verification' | 'settings';
+  const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+
+  // ── Profile Edit State ──
   const [editName, setEditName] = useState(profile?.name || userProfile.name || '');
   const [editPhone, setEditPhone] = useState(profile?.phone || '');
+  const [editBio, setEditBio] = useState(profile?.bio || '');
   const [profileFeedback, setProfileFeedback] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Verification State ──
+  const [verification, setVerification] = useState<ProfileVerification | null>(null);
+  const [docType, setDocType] = useState<DocType>('id_card');
+  const [frontFile, setFrontFile] = useState<File | null>(null);
+  const [backFile, setBackFile] = useState<File | null>(null);
+  const [verifFeedback, setVerifFeedback] = useState<string | null>(null);
+
+  // ── Payment Cards (Supabase) ──
+  const [dbCards, setDbCards] = useState<PaymentCardDB[]>([]);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardholder, setCardholder] = useState('');
+  const [cardFeedback, setCardFeedback] = useState<string | null>(null);
+
+  // ── Wallet / Refill ──
+  const [refillAmount, setRefillAmount] = useState('50');
+  const [refillFeedback, setRefillFeedback] = useState<string | null>(null);
+
+  // ── Boost ──
+  const [activatedBoost, setActivatedBoost] = useState<string | null>(null);
+  const [boostFeedback, setBoostFeedback] = useState<string | null>(null);
+
+  const currencySymbol = currency === 'GEL' ? '₾' : '$';
+
+  // Load verification + cards on mount
+  useEffect(() => {
+    if (user?.id) {
+      getVerification().then(({ data }) => setVerification(data));
+      fetchCards().then(({ data }) => setDbCards(data));
+    }
+  }, [user?.id, getVerification, fetchCards]);
+
   const handleSaveProfile = async () => {
-    const { error } = await updateProfile({ name: editName, phone: editPhone });
+    const { error } = await updateProfile({ name: editName, phone: editPhone, bio: editBio });
     if (error) { setProfileFeedback('შეცდომა: ' + error); }
     else {
       setUserProfile((prev: any) => ({ ...prev, name: editName }));
@@ -82,146 +113,102 @@ export default function ProfileView({
     setTimeout(() => setProfileFeedback(null), 3000);
   };
 
-  const [activeSubTab, setActiveSubTab] = useState<'balance_refill' | 'payment_methods' | 'my_listings' | 'balance_view' | 'boost' | 'edit_profile'>('my_listings');
-  const [activatedBoost, setActivatedBoost] = useState<string | null>(null);
-  const [boostFeedback, setBoostFeedback] = useState<string | null>(null);
-  
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
-  const [cardholder, setCardholder] = useState('');
-  const [refillAmount, setRefillAmount] = useState('50');
-  const [selectedCardId, setSelectedCardId] = useState(paymentCards[0]?.id || '');
-  const [formFeedback, setFormFeedback] = useState<string | null>(null);
-
-  const currencySymbol = currency === 'GEL' ? '₾' : '$';
-
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
     const formatted = raw.match(/.{1,4}/g)?.join(' ') || '';
-    if (formatted.length <= 19) {
-      setCardNumber(formatted);
-    }
+    if (formatted.length <= 19) setCardNumber(formatted);
   };
-
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
     let formatted = raw;
-    if (raw.length > 2) {
-      formatted = `${raw.slice(0, 2)}/${raw.slice(2, 4)}`;
-    }
-    if (formatted.length <= 5) {
-      setCardExpiry(formatted);
-    }
+    if (raw.length > 2) formatted = `${raw.slice(0, 2)}/${raw.slice(2, 4)}`;
+    if (formatted.length <= 5) setCardExpiry(formatted);
   };
-
   const handleCvcChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
-    if (raw.length <= 3) {
-      setCardCvc(raw);
-    }
+    if (raw.length <= 3) setCardCvc(raw);
   };
 
-  const handleAddCard = (e: React.FormEvent) => {
+  const handleAddDbCard = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cardNumber.length < 19 || cardExpiry.length < 5 || cardCvc.length < 3) {
-      setFormFeedback('გთხოვთ შეავსოთ ბარათის მონაცემები სრულყოფილად!');
+    if (cardNumber.replace(/\s/g, '').length < 13 || cardExpiry.length < 5 || cardCvc.length < 3) {
+      setCardFeedback('გთხოვთ შეავსოთ ბარათის მონაცემები სრულყოფილად!');
       return;
     }
-
-    const brand: 'visa' | 'mastercard' | 'amex' = cardNumber.startsWith('4')
-      ? 'visa'
-      : cardNumber.startsWith('5')
-      ? 'mastercard'
-      : 'amex';
-
-    const newCard: PaymentCard = {
-      id: `card-${Date.now()}`,
-      number: `•••• •••• •••• ${cardNumber.slice(-4)}`,
-      expiry: cardExpiry,
-      cvc: cardCvc,
-      type: brand,
-      cardholder: cardholder || 'SABA KUNCHUASHVILI',
-      colorTheme: 'silver-classic',
-    };
-
-    setPaymentCards([newCard, ...paymentCards]);
-    setSelectedCardId(newCard.id);
-    setCardNumber('');
-    setCardExpiry('');
-    setCardCvc('');
-    setCardholder('');
-    setFormFeedback('ბარათი წარმატებით დაემატა!');
-    setTimeout(() => setFormFeedback(null), 3000);
+    const brand: 'visa' | 'mastercard' | 'amex' = cardNumber.startsWith('4') ? 'visa' : cardNumber.startsWith('5') ? 'mastercard' : 'amex';
+    const { data, error } = await addCard({
+      last4: cardNumber.slice(-4),
+      brand,
+      expiryMonth: cardExpiry.split('/')[0],
+      expiryYear: cardExpiry.split('/')[1],
+      cardholderName: cardholder || 'Cardholder',
+    });
+    if (error) setCardFeedback('შეცდომა: ' + error);
+    else {
+      setCardNumber(''); setCardExpiry(''); setCardCvc(''); setCardholder('');
+      setCardFeedback('ბარათი წარმატებით დაემატა!');
+      if (data) setDbCards(prev => [data, ...prev]);
+    }
+    setTimeout(() => setCardFeedback(null), 3000);
   };
 
-  const handleRefillDeposit = (e: React.FormEvent) => {
+  const handleDeleteCard = async (id: string) => {
+    const { error } = await deleteCard(id);
+    if (!error) setDbCards(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleRefill = (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = parseFloat(refillAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      setFormFeedback('გთხოვთ შეიყვანოთ სწორი თანხა!');
+      setRefillFeedback('გთხოვთ შეიყვანოთ სწორი თანხა!');
       return;
     }
-
-    setUserProfile((prev: any) => ({
-      ...prev,
-      balance: prev.balance + amountNum,
-    }));
-
-    setFormFeedback(`ბალანსი შეივსო ${amountNum} ₾-ით წარმატებით!`);
-    setTimeout(() => setFormFeedback(null), 3500);
+    setUserProfile((prev: any) => ({ ...prev, balance: prev.balance + amountNum }));
+    setRefillFeedback(`ბალანსი შეივსო ${amountNum} ₾-ით!`);
+    setTimeout(() => setRefillFeedback(null), 3500);
   };
+
+  const handleVerificationSubmit = async () => {
+    if (!frontFile) { setVerifFeedback('გთხოვთ ატვირთოთ დოკუმენტის ფოტო'); return; }
+    setVerifFeedback(null);
+    const { data, error } = await uploadDoc(docType, frontFile, backFile || undefined);
+    if (error) setVerifFeedback('შეცდომა: ' + error);
+    else {
+      setVerification(data);
+      setVerifFeedback('დოკუმენტი წარმატებით აიტვირთა! მიმდინარეობს შემოწმება.');
+      setFrontFile(null); setBackFile(null);
+    }
+    setTimeout(() => setVerifFeedback(null), 5000);
+  };
+
+  const navItems: { id: TabId; label: string; icon: React.ReactNode }[] = [
+    { id: 'dashboard', label: 'დაფა', icon: <LayoutDashboard size={15} /> },
+    { id: 'my_listings', label: 'ჩემი განცხადებები', icon: <Layers size={15} /> },
+    { id: 'boost', label: 'გაბუსთება', icon: <Zap size={15} /> },
+    { id: 'wallet', label: 'საფულე', icon: <Wallet size={15} /> },
+    { id: 'verification', label: 'ვერიფიკაცია', icon: <BadgeCheck size={15} /> },
+    { id: 'settings', label: 'პროფილი', icon: <Settings size={15} /> },
+  ];
 
   const boostPlans = [
     {
-      id: 'pro',
-      name: 'PRO',
-      price: 150,
-      badge: <Crown size={16} />,
-      color: 'bg-gray-900',
-      textColor: 'text-white',
-      borderColor: 'border-gray-900',
-      bgLight: 'bg-gray-100',
-      features: [
-        'განცხადება საძიებო შედეგების სათავეში',
-        'მთავარ გვერდზე ფიჩერირება',
-        'PRO BOOST ბეიჯი ყველა სიაში',
-        'პრიორიტეტული კონტაქტის ვიჯეტი',
-        'განცხადება ელ-ფოსტის განმახლებელში',
-        '30 დღე სრული ხილვადობა',
-      ],
+      id: 'pro', name: 'PRO', price: 150,
+      badge: <Crown size={16} />, color: 'bg-gray-900', textColor: 'text-white',
+      borderColor: 'border-gray-900', bgLight: 'bg-gray-100',
+      features: ['განცხადება საძიებო შედეგების სათავეში','მთავარ გვერდზე ფიჩერირება','PRO BOOST ბეიჯი','30 დღე სრული ხილვადობა'],
     },
     {
-      id: 'normal',
-      name: 'NORMAL',
-      price: 60,
-      badge: <Star size={16} />,
-      color: 'bg-violet-600',
-      textColor: 'text-white',
-      borderColor: 'border-violet-500',
-      bgLight: 'bg-violet-50',
-      features: [
-        'BOOST ბეიჯი განცხადებაზე',
-        'გამოყოფილი პოზიცია ძიებაში',
-        'განცხადება კვირის Top სიაში',
-        'გაზრდილი ხილვადობა',
-        '30 დღე',
-      ],
+      id: 'normal', name: 'NORMAL', price: 60,
+      badge: <Star size={16} />, color: 'bg-violet-600', textColor: 'text-white',
+      borderColor: 'border-violet-500', bgLight: 'bg-violet-50',
+      features: ['BOOST ბეიჯი განცხადებაზე','გამოყოფილი პოზიცია ძიებაში','კვირის Top სია','30 დღე'],
     },
     {
-      id: 'basic',
-      name: 'BASIC',
-      price: 25,
-      badge: <Zap size={16} />,
-      color: 'bg-slate-700',
-      textColor: 'text-white',
-      borderColor: 'border-slate-400',
-      bgLight: 'bg-slate-50',
-      features: [
-        'მცირე ხილვადობის გაუმჯობესება',
-        'ძიებაში ოდნავ მაღალი პოზიცია',
-        '30 დღე',
-      ],
+      id: 'basic', name: 'BASIC', price: 25,
+      badge: <Zap size={16} />, color: 'bg-slate-700', textColor: 'text-white',
+      borderColor: 'border-slate-400', bgLight: 'bg-slate-50',
+      features: ['მცირე ხილვადობის გაუმჯობესება','ძიებაში ოდნავ მაღალი პოზიცია','30 დღე'],
     },
   ];
 

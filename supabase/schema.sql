@@ -27,14 +27,14 @@ CREATE TABLE IF NOT EXISTS properties (
 ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
 
 -- 3. RLS Policies
-CREATE POLICY "Allow anonymous inserts from webhook" ON properties
-  FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous inserts from webhook" ON properties;
+CREATE POLICY "Allow anonymous inserts from webhook" ON properties FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Allow all reads" ON properties
-  FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all reads" ON properties;
+CREATE POLICY "Allow all reads" ON properties FOR SELECT USING (true);
 
-CREATE POLICY "Allow authenticated updates" ON properties
-  FOR UPDATE USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated updates" ON properties;
+CREATE POLICY "Allow authenticated updates" ON properties FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- 4. Auto-update updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -62,6 +62,8 @@ export default function SidebarFilter({
     };
   }, [locationDropdownOpen]);
 
+  const popularCities = ['თბილისი', 'ბათუმი', 'ქუთაისი', 'ქობულეთი', 'ოზურგეთი', 'ზუგდიდი', 'ფოთი', 'გორი', 'რუსთავი', 'სიღნაღი'];
+
   const typeLabels: { value: ListingType | 'all'; label: string }[] = [
     { value: 'all',      label: 'ყველა' },
     { value: 'sale',     label: 'იყიდება' },
@@ -87,20 +89,9 @@ export default function SidebarFilter({
   const inp = 'w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-800 focus:outline-none focus:border-ss-primary focus:bg-white transition-colors';
 
   // Filter locations based on search
-  const filteredPopular = GEORGIAN_LOCATIONS.popular.filter(loc => 
+  const filteredPopular = popularCities.filter(loc => 
     loc.toLowerCase().includes(locationSearch.toLowerCase())
   );
-  const filteredMunicipalities = GEORGIAN_LOCATIONS.municipalities.filter(loc => 
-    loc.toLowerCase().includes(locationSearch.toLowerCase())
-  );
-
-  // Group municipalities by first letter
-  const municipalitiesByLetter = filteredMunicipalities.reduce((acc, loc) => {
-    const firstLetter = loc.charAt(0);
-    if (!acc[firstLetter]) acc[firstLetter] = [];
-    acc[firstLetter].push(loc);
-    return acc;
-  }, {} as Record<string, string[]>);
 
   return (
     <div className="w-full lg:w-64 xl:w-72 flex flex-col gap-2">
@@ -133,41 +124,39 @@ export default function SidebarFilter({
         </div>
       </div>
 
-      {/* ── Location search with dropdown ── */}
+      {/* ── Location text search ── */}
       <div className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 relative" ref={dropdownRef}>
         <label className={lbl} htmlFor="area-search">მდებარეობა</label>
         <div className="relative">
-          <input 
-            id="area-search" 
-            type="text" 
+          <input
+            id="area-search"
+            type="text"
             value={searchArea}
             onChange={(e) => {
               setSearchArea(e.target.value);
               setLocationSearch(e.target.value);
-              setLocationDropdownOpen(true);
+              setLocationDropdownOpen(e.target.value.length > 0);
             }}
-            onFocus={() => setLocationDropdownOpen(true)}
+            onFocus={() => { if (searchArea) setLocationDropdownOpen(true); }}
             placeholder="ჩაწერე რაიონი, ქალაქი, უბანი ან ქუჩა"
             className={inp + ' pr-8'}
           />
           <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
 
-        {/* Location Dropdown */}
+        {/* Quick city suggestions — clicking only fills the text, does NOT override the City selector */}
         {locationDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[400px] overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[260px] overflow-y-auto">
             <div className="p-3">
-              {/* Popular Cities */}
               {filteredPopular.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">პოპულარული ქალაქები</p>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">ქალაქები</p>
                   <div className="space-y-1">
                     {filteredPopular.map(city => (
                       <button
                         key={city}
                         onClick={() => {
                           setSearchArea(city);
-                          setSelectedCity(city);
                           setLocationDropdownOpen(false);
                           setLocationSearch('');
                         }}
@@ -179,37 +168,7 @@ export default function SidebarFilter({
                   </div>
                 </div>
               )}
-
-              {/* Municipalities */}
-              {Object.keys(municipalitiesByLetter).length > 0 && (
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">მუნიციპალიტეტები</p>
-                  {Object.entries(municipalitiesByLetter).sort(([a], [b]) => a.localeCompare(b)).map(([letter, municipalities]) => (
-                    <div key={letter} className="mb-2">
-                      <p className="text-[10px] font-bold text-gray-400 mb-1">{letter}</p>
-                      <div className="space-y-1">
-                        {municipalities.map(municipality => (
-                          <button
-                            key={municipality}
-                            onClick={() => {
-                              setSearchArea(municipality);
-                              setSelectedCity(municipality);
-                              setLocationDropdownOpen(false);
-                              setLocationSearch('');
-                            }}
-                            className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-colors"
-                          >
-                            {municipality}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* No results */}
-              {filteredPopular.length === 0 && Object.keys(municipalitiesByLetter).length === 0 && (
+              {filteredPopular.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-4">შედეგი არ მოიძებნა</p>
               )}
             </div>

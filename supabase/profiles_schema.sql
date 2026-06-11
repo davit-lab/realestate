@@ -15,18 +15,21 @@ create table if not exists public.profiles (
 alter table public.profiles enable row level security;
 
 -- Users can read their own profile
-create policy "own profile read"
-  on public.profiles for select
+drop policy if exists "own profile read" on public.profiles;
+DROP POLICY IF EXISTS "own profile read" ON public.profiles;
+CREATE POLICY "own profile read" ON public.profiles FOR select
   using (auth.uid() = id);
 
 -- Users can update their own profile
-create policy "own profile update"
-  on public.profiles for update
+drop policy if exists "own profile update" on public.profiles;
+DROP POLICY IF EXISTS "own profile update" ON public.profiles;
+CREATE POLICY "own profile update" ON public.profiles FOR update
   using (auth.uid() = id);
 
 -- Admins can read all profiles
-create policy "admin read all"
-  on public.profiles for select
+drop policy if exists "admin read all" on public.profiles;
+DROP POLICY IF EXISTS "admin read all" ON public.profiles;
+CREATE POLICY "admin read all" ON public.profiles FOR select
   using (
     exists (
       select 1 from public.profiles
@@ -35,8 +38,9 @@ create policy "admin read all"
   );
 
 -- Admins can update all profiles
-create policy "admin update all"
-  on public.profiles for update
+drop policy if exists "admin update all" on public.profiles;
+DROP POLICY IF EXISTS "admin update all" ON public.profiles;
+CREATE POLICY "admin update all" ON public.profiles FOR update
   using (
     exists (
       select 1 from public.profiles

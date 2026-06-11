@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X, CheckCircle, Image as ImageIcon, Home, Building2, Compass,
   Star, Wifi, Car, Coffee, Waves, Dumbbell, UtensilsCrossed,
-  Plane, Train, Music, Mountain, MapPin, Calendar, Clock, ChevronLeft
+  Plane, Train, Music, Mountain, MapPin, Calendar, Clock, ChevronLeft, Map
 } from 'lucide-react';
 import { Listing, ListingType } from '../types';
+import LocationPicker from './LocationPicker';
 
 type Section = 'real_estate' | 'hotel' | 'tourism';
 type TourismCat = 'attractions' | 'flights' | 'trains' | 'concerts';
@@ -85,12 +86,25 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
 
   // Real Estate state
   const [re, setRe] = useState({ dealType: 'sale' as ListingType, propType: 'apartment', title: '', city: 'თბილისი', district: '', street: '', rooms: '3', beds: '2', area: '', floor: '', totalFloors: '', status: 'ახალი აშენებული', condition: 'ახალი რემონტით', description: '', priceGel: '', priceUsd: '', phone: '' });
+  const [pickedLat, setPickedLat] = useState<number | null>(null);
+  const [pickedLng, setPickedLng] = useState<number | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [mapError, setMapError] = useState('');
 
   // Hotel state
   const [hotel, setHotel] = useState({ name: '', stars: 4, city: 'ბათუმი', district: '', pricePerNight: '', amenities: [] as string[], checkin: '14:00', checkout: '12:00', description: '', phone: '', website: '' });
 
   // Tourism state
   const [tour, setTour] = useState({ cat: 'attractions' as TourismCat, title: '', city: 'თბილისი', price: '', currency: '₾', date: '', time: '', duration: '', description: '', phone: '', from: '', to: '' });
+
+  useEffect(() => {
+    if (isOpen) {
+      setPickedLat(null);
+      setPickedLng(null);
+      setShowMapPicker(false);
+      setMapError('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -120,8 +134,10 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setMapError('');
     if (section === 'real_estate') {
       if (!re.priceGel || !re.area) { alert('შეავსეთ ფასი და ფართობი'); return; }
+      if (pickedLat == null || pickedLng == null) { setMapError('გთხოვთ მონიშნოთ მდებარეობა რუკაზე'); return; }
       const priceLari = parseFloat(re.priceGel) || 0;
       const newListing: Listing = {
         id: `custom-${Date.now()}`,
@@ -137,12 +153,17 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
         condition: re.condition, status: re.status,
         descriptions: { ka: re.description || '', en: '', ru: '' },
         priceLevel: priceLari > 1500000 ? 'high' : priceLari < 300000 ? 'cheap' : 'average',
-        coordinates: { x: 35 + Math.random() * 30, y: 35 + Math.random() * 30 }, comments: []
+        coordinates: { x: 35 + Math.random() * 30, y: 35 + Math.random() * 30 }, comments: [],
+        lat: pickedLat, lng: pickedLng
       };
       onAddListing(newListing);
     }
     setSuccess(true);
-    setTimeout(() => { setSuccess(false); setSection(null); setImages([]); setImageFiles([]); onClose(); }, 2500);
+    setTimeout(() => {
+      setSuccess(false); setSection(null); setImages([]); setImageFiles([]);
+      setPickedLat(null); setPickedLng(null); setShowMapPicker(false); setMapError('');
+      onClose();
+    }, 2500);
   };
 
   const SECTIONS = [
@@ -247,6 +268,43 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
             </div>
             <input value={re.street} onChange={e=>setRe(p=>({...p,street:e.target.value}))} placeholder="ქუჩა, სახლის ნომერი" className={inp()} />
 
+            {/* Map Location Picker */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-1">
+                <MapPin size={11} />მდებარეობა რუკაზე <span className="text-red-400">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowMapPicker(v => !v)}
+                className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition-all cursor-pointer w-full justify-center ${
+                  showMapPicker || pickedLat
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200/50'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Map size={14} />
+                {pickedLat ? '✓ მონიშნულია' : 'მდებარეობის არჩევა რუკაზე'}
+              </button>
+              {showMapPicker && (
+                <LocationPicker
+                  onPick={(lat, lng, address) => {
+                    setPickedLat(lat);
+                    setPickedLng(lng);
+                    setMapError('');
+                    if (address && !re.street) {
+                      setRe(p => ({ ...p, street: address }));
+                    }
+                  }}
+                  initialLat={pickedLat ?? undefined}
+                  initialLng={pickedLng ?? undefined}
+                  initialAddress={re.street}
+                />
+              )}
+              {mapError && (
+                <p className="text-[12px] text-red-500 font-medium">{mapError}</p>
+              )}
+            </div>
+
             <div className="grid grid-cols-4 gap-2">
               {[{k:'rooms',l:'ოთახი',ph:'3'},{k:'beds',l:'საძინ.',ph:'2'},{k:'area',l:'ფართობი',ph:'85'},{k:'floor',l:'სართ.',ph:'4/12'}].map(f=>(
                 <React.Fragment key={f.k}>
@@ -282,7 +340,13 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
             </Field>
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-[13px] font-semibold hover:bg-gray-50 cursor-pointer">გაუქმება</button>
-              <button type="submit" className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-xl text-[13px] font-bold cursor-pointer transition-colors">გამოქვეყნება</button>
+              <button
+                type="submit"
+                disabled={pickedLat == null || pickedLng == null}
+                className="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-[13px] font-bold cursor-pointer transition-colors"
+              >
+                გამოქვეყნება
+              </button>
             </div>
           </form>
 

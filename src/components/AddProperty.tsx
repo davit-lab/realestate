@@ -141,6 +141,10 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
       setSubmitError('განცხადების დასამატებლად საჭიროა ავტორიზაცია.');
       return;
     }
+    if (pickedLat == null || pickedLng == null) {
+      setSubmitError('გთხოვთ მონიშნოთ მდებარეობა რუკაზე (აუცილებელია).');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -420,7 +424,7 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
           {/* Location */}
           <div className="space-y-2">
             <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-1">
-              <MapPin size={11} />მდებარეობა
+              <MapPin size={11} />მდებარეობა <span className="text-red-400">*</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -547,7 +551,7 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || pickedLat == null || pickedLng == null}
             className="w-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-semibold py-4 rounded-2xl text-[15px] shadow-xl shadow-stone-400/30 transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
           >

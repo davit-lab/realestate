@@ -15,24 +15,29 @@ create table if not exists public.support_tickets (
 
 alter table public.support_tickets enable row level security;
 
-create policy "auth read own tickets"
-  on public.support_tickets for select
+drop policy if exists "auth read own tickets" on public.support_tickets;
+DROP POLICY IF EXISTS "auth read own tickets" ON public.support_tickets;
+CREATE POLICY "auth read own tickets" ON public.support_tickets FOR select
   using (auth.uid() = user_id);
 
-create policy "admin read all tickets"
-  on public.support_tickets for select
+drop policy if exists "admin read all tickets" on public.support_tickets;
+DROP POLICY IF EXISTS "admin read all tickets" ON public.support_tickets;
+CREATE POLICY "admin read all tickets" ON public.support_tickets FOR select
   using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
 
-create policy "auth insert tickets"
-  on public.support_tickets for insert
+drop policy if exists "auth insert tickets" on public.support_tickets;
+DROP POLICY IF EXISTS "auth insert tickets" ON public.support_tickets;
+CREATE POLICY "auth insert tickets" ON public.support_tickets FOR insert
   with check (auth.role() = 'authenticated');
 
-create policy "admin update tickets"
-  on public.support_tickets for update
+drop policy if exists "admin update tickets" on public.support_tickets;
+DROP POLICY IF EXISTS "admin update tickets" ON public.support_tickets;
+CREATE POLICY "admin update tickets" ON public.support_tickets FOR update
   using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
 
-create policy "admin delete tickets"
-  on public.support_tickets for delete
+drop policy if exists "admin delete tickets" on public.support_tickets;
+DROP POLICY IF EXISTS "admin delete tickets" ON public.support_tickets;
+CREATE POLICY "admin delete tickets" ON public.support_tickets FOR delete
   using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
 
 -- ================================================================
@@ -53,20 +58,24 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
-create policy "public read profiles"
-  on public.profiles for select
+drop policy if exists "public read profiles" on public.profiles;
+DROP POLICY IF EXISTS "public read profiles" ON public.profiles;
+CREATE POLICY "public read profiles" ON public.profiles FOR select
   using (true);
 
-create policy "auth insert own profile"
-  on public.profiles for insert
+drop policy if exists "auth insert own profile" on public.profiles;
+DROP POLICY IF EXISTS "auth insert own profile" ON public.profiles;
+CREATE POLICY "auth insert own profile" ON public.profiles FOR insert
   with check (auth.uid() = id);
 
-create policy "auth update own profile"
-  on public.profiles for update
+drop policy if exists "auth update own profile" on public.profiles;
+DROP POLICY IF EXISTS "auth update own profile" ON public.profiles;
+CREATE POLICY "auth update own profile" ON public.profiles FOR update
   using (auth.uid() = id);
 
-create policy "admin all profiles"
-  on public.profiles for all
+drop policy if exists "admin all profiles" on public.profiles;
+DROP POLICY IF EXISTS "admin all profiles" ON public.profiles;
+CREATE POLICY "admin all profiles" ON public.profiles FOR all
   using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
 
 -- ================================================================
@@ -84,20 +93,24 @@ create table if not exists public.comments (
 
 alter table public.comments enable row level security;
 
-create policy "public read comments"
-  on public.comments for select
+drop policy if exists "public read comments" on public.comments;
+DROP POLICY IF EXISTS "public read comments" ON public.comments;
+CREATE POLICY "public read comments" ON public.comments FOR select
   using (true);
 
-create policy "auth insert comments"
-  on public.comments for insert
+drop policy if exists "auth insert comments" on public.comments;
+DROP POLICY IF EXISTS "auth insert comments" ON public.comments;
+CREATE POLICY "auth insert comments" ON public.comments FOR insert
   with check (auth.role() = 'authenticated');
 
-create policy "own update comments"
-  on public.comments for update
+drop policy if exists "own update comments" on public.comments;
+DROP POLICY IF EXISTS "own update comments" ON public.comments;
+CREATE POLICY "own update comments" ON public.comments FOR update
   using (auth.uid() = user_id);
 
-create policy "own delete comments"
-  on public.comments for delete
+drop policy if exists "own delete comments" on public.comments;
+DROP POLICY IF EXISTS "own delete comments" ON public.comments;
+CREATE POLICY "own delete comments" ON public.comments FOR delete
   using (auth.uid() = user_id);
 
 -- ================================================================
@@ -132,24 +145,29 @@ create table if not exists public.properties (
 
 alter table public.properties enable row level security;
 
-create policy "public read properties"
-  on public.properties for select
+drop policy if exists "public read properties" on public.properties;
+DROP POLICY IF EXISTS "public read properties" ON public.properties;
+CREATE POLICY "public read properties" ON public.properties FOR select
   using (status = 'live');
 
-create policy "auth insert properties"
-  on public.properties for insert
+drop policy if exists "auth insert properties" on public.properties;
+DROP POLICY IF EXISTS "auth insert properties" ON public.properties;
+CREATE POLICY "auth insert properties" ON public.properties FOR insert
   with check (auth.uid() = user_id);
 
-create policy "own update properties"
-  on public.properties for update
+drop policy if exists "own update properties" on public.properties;
+DROP POLICY IF EXISTS "own update properties" ON public.properties;
+CREATE POLICY "own update properties" ON public.properties FOR update
   using (auth.uid() = user_id);
 
-create policy "own delete properties"
-  on public.properties for delete
+drop policy if exists "own delete properties" on public.properties;
+DROP POLICY IF EXISTS "own delete properties" ON public.properties;
+CREATE POLICY "own delete properties" ON public.properties FOR delete
   using (auth.uid() = user_id);
 
-create policy "admin all properties"
-  on public.properties for all
+drop policy if exists "admin all properties" on public.properties;
+DROP POLICY IF EXISTS "admin all properties" ON public.properties;
+CREATE POLICY "admin all properties" ON public.properties FOR all
   using (
     exists (select 1 from public.profiles where id = auth.uid() and is_admin = true)
   );
@@ -166,27 +184,33 @@ insert into storage.buckets (id, name, public)
   on conflict (id) do nothing;
 
 -- Avatar policies
-create policy "avatar upload"
-  on storage.objects for insert
+drop policy if exists "avatar upload" on storage.objects;
+DROP POLICY IF EXISTS "avatar upload" ON storage.objects;
+CREATE POLICY "avatar upload" ON storage.objects FOR insert
   with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
 
-create policy "avatar public read"
-  on storage.objects for select
+drop policy if exists "avatar public read" on storage.objects;
+DROP POLICY IF EXISTS "avatar public read" ON storage.objects;
+CREATE POLICY "avatar public read" ON storage.objects FOR select
   using (bucket_id = 'avatars');
 
-create policy "avatar owner delete"
-  on storage.objects for delete
+drop policy if exists "avatar owner delete" on storage.objects;
+DROP POLICY IF EXISTS "avatar owner delete" ON storage.objects;
+CREATE POLICY "avatar owner delete" ON storage.objects FOR delete
   using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
 
 -- Property image policies
-create policy "property image upload"
-  on storage.objects for insert
+drop policy if exists "property image upload" on storage.objects;
+DROP POLICY IF EXISTS "property image upload" ON storage.objects;
+CREATE POLICY "property image upload" ON storage.objects FOR insert
   with check (bucket_id = 'property-images' and auth.role() = 'authenticated');
 
-create policy "property image public read"
-  on storage.objects for select
+drop policy if exists "property image public read" on storage.objects;
+DROP POLICY IF EXISTS "property image public read" ON storage.objects;
+CREATE POLICY "property image public read" ON storage.objects FOR select
   using (bucket_id = 'property-images');
 
-create policy "property image owner delete"
-  on storage.objects for delete
+drop policy if exists "property image owner delete" on storage.objects;
+DROP POLICY IF EXISTS "property image owner delete" ON storage.objects;
+CREATE POLICY "property image owner delete" ON storage.objects FOR delete
   using (bucket_id = 'property-images' and auth.uid()::text = (storage.foldername(name))[1]);

@@ -16,7 +16,7 @@ import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
 import SmartSearchAI, { parseNaturalQuery, ParsedQuery } from './components/SmartSearchAI';
 import AuthModal from './components/AuthModal';
-import AdminPanel from './components/AdminPanel';
+import AdminPanel from './components/admin/AdminPanel';
 import QuickSearch from './components/QuickSearch';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
@@ -210,6 +210,8 @@ export default function App() {
         vip_status: newListing.vipStatus,
         author_name: newListing.author.name,
         author_avatar: newListing.author.avatar,
+        lat: newListing.lat ?? null,
+        lng: newListing.lng ?? null,
       });
       if (!error) {
         // Trigger refresh of dbListings

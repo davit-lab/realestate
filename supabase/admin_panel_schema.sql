@@ -15,9 +15,13 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin read all transactions" ON public.transactions;
+DROP POLICY IF EXISTS "admin read all transactions" ON public.transactions;
 CREATE POLICY "admin read all transactions" ON public.transactions FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
+DROP POLICY IF EXISTS "admin insert transactions" ON public.transactions;
+DROP POLICY IF EXISTS "admin insert transactions" ON public.transactions;
 CREATE POLICY "admin insert transactions" ON public.transactions FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
@@ -35,9 +39,13 @@ CREATE TABLE IF NOT EXISTS public.user_packages (
 
 ALTER TABLE public.user_packages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin read all user_packages" ON public.user_packages;
+DROP POLICY IF EXISTS "admin read all user_packages" ON public.user_packages;
 CREATE POLICY "admin read all user_packages" ON public.user_packages FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
+DROP POLICY IF EXISTS "admin write user_packages" ON public.user_packages;
+DROP POLICY IF EXISTS "admin write user_packages" ON public.user_packages;
 CREATE POLICY "admin write user_packages" ON public.user_packages FOR ALL
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
@@ -55,13 +63,15 @@ CREATE TABLE IF NOT EXISTS public.support_templates (
 
 ALTER TABLE public.support_templates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin manage templates" ON public.support_templates;
+DROP POLICY IF EXISTS "admin manage templates" ON public.support_templates;
 CREATE POLICY "admin manage templates" ON public.support_templates FOR ALL
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
 -- 4. Admin notes on support tickets
 CREATE TABLE IF NOT EXISTS public.ticket_admin_notes (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_id   UUID REFERENCES public.support_tickets(id) ON DELETE CASCADE NOT NULL,
+  ticket_id   text REFERENCES public.support_tickets(id) ON DELETE CASCADE NOT NULL,
   admin_id    UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   note        TEXT NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
@@ -69,6 +79,8 @@ CREATE TABLE IF NOT EXISTS public.ticket_admin_notes (
 
 ALTER TABLE public.ticket_admin_notes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin ticket notes" ON public.ticket_admin_notes;
+DROP POLICY IF EXISTS "admin ticket notes" ON public.ticket_admin_notes;
 CREATE POLICY "admin ticket notes" ON public.ticket_admin_notes FOR ALL
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
@@ -82,6 +94,8 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
 
 ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin site settings" ON public.site_settings;
+DROP POLICY IF EXISTS "admin site settings" ON public.site_settings;
 CREATE POLICY "admin site settings" ON public.site_settings FOR ALL
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
@@ -113,6 +127,8 @@ CREATE TABLE IF NOT EXISTS public.announcements (
 
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin announcements" ON public.announcements;
+DROP POLICY IF EXISTS "admin announcements" ON public.announcements;
 CREATE POLICY "admin announcements" ON public.announcements FOR ALL
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
@@ -128,6 +144,8 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_log (
 
 ALTER TABLE public.admin_audit_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin audit log" ON public.admin_audit_log;
+DROP POLICY IF EXISTS "admin audit log" ON public.admin_audit_log;
 CREATE POLICY "admin audit log" ON public.admin_audit_log FOR ALL
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true));
 
@@ -143,9 +161,18 @@ CREATE TRIGGER update_support_templates_updated_at
   BEFORE UPDATE ON public.support_templates
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 10. Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.user_packages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.support_templates;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.site_settings;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.announcements;
+-- 10. Realtime (safe — skips if already added)
+DO $$
+DECLARE
+  t text;
+  tables text[] := ARRAY['transactions', 'user_packages', 'support_templates', 'site_settings', 'announcements'];
+BEGIN
+  FOREACH t IN ARRAY tables LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    END IF;
+  END LOOP;
+END $$;

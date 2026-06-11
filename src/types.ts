@@ -162,3 +162,67 @@ export interface AdminStats {
   openTickets: number;
   activePackages: number;
 }
+
+// ── Profile System Types ──
+export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+export type DocType = 'id_card' | 'passport' | 'license';
+
+export interface ProfileVerification {
+  id: string;
+  user_id: string;
+  doc_type: DocType;
+  front_image_url: string;
+  back_image_url: string;
+  status: VerificationStatus;
+  admin_note: string;
+  submitted_at: string;
+  reviewed_at: string;
+  reviewed_by: string;
+}
+
+export interface PaymentCardDB {
+  id: string;
+  user_id: string;
+  last4: string;
+  brand: 'visa' | 'mastercard' | 'amex' | 'standard_pay';
+  expiry_month: string;
+  expiry_year: string;
+  cardholder_name: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface ProfileViewEntry {
+  id: string;
+  viewed_profile_id: string;
+  viewer_id: string | null;
+  viewer_ip_hash: string | null;
+  viewed_at: string;
+  viewer_name?: string;
+  viewer_avatar?: string;
+}
+
+export interface ListingViewEntry {
+  id: string;
+  listing_id: string;
+  viewer_id: string | null;
+  viewer_ip_hash: string | null;
+  viewed_at: string;
+}
+
+export interface ProfileActivity {
+  user_id: string;
+  date: string;
+  profile_views_count: number;
+  listings_views_count: number;
+  new_messages: number;
+}
+
+export interface ViewStats {
+  totalProfileViews: number;
+  totalListingViews: number;
+  todayProfileViews: number;
+  todayListingViews: number;
+  recentViewers: ProfileViewEntry[];
+  activityData: ProfileActivity[];
+}

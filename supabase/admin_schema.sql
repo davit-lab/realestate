@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "admin read all transactions"
-  ON public.transactions FOR SELECT
+DROP POLICY IF EXISTS "admin read all transactions" ON public.transactions;
+CREATE POLICY "admin read all transactions" ON public.transactions FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -25,8 +25,8 @@ CREATE POLICY "admin read all transactions"
     )
   );
 
-CREATE POLICY "admin insert transactions"
-  ON public.transactions FOR INSERT
+DROP POLICY IF EXISTS "admin insert transactions" ON public.transactions;
+CREATE POLICY "admin insert transactions" ON public.transactions FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS public.user_packages (
 
 ALTER TABLE public.user_packages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "admin read all user_packages"
-  ON public.user_packages FOR SELECT
+DROP POLICY IF EXISTS "admin read all user_packages" ON public.user_packages;
+CREATE POLICY "admin read all user_packages" ON public.user_packages FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -57,8 +57,8 @@ CREATE POLICY "admin read all user_packages"
     )
   );
 
-CREATE POLICY "admin insert user_packages"
-  ON public.user_packages FOR INSERT
+DROP POLICY IF EXISTS "admin insert user_packages" ON public.user_packages;
+CREATE POLICY "admin insert user_packages" ON public.user_packages FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -66,8 +66,8 @@ CREATE POLICY "admin insert user_packages"
     )
   );
 
-CREATE POLICY "admin update user_packages"
-  ON public.user_packages FOR UPDATE
+DROP POLICY IF EXISTS "admin update user_packages" ON public.user_packages;
+CREATE POLICY "admin update user_packages" ON public.user_packages FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -75,8 +75,8 @@ CREATE POLICY "admin update user_packages"
     )
   );
 
-CREATE POLICY "admin delete user_packages"
-  ON public.user_packages FOR DELETE
+DROP POLICY IF EXISTS "admin delete user_packages" ON public.user_packages;
+CREATE POLICY "admin delete user_packages" ON public.user_packages FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -98,8 +98,8 @@ CREATE TABLE IF NOT EXISTS public.support_templates (
 
 ALTER TABLE public.support_templates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "admin read support_templates"
-  ON public.support_templates FOR SELECT
+DROP POLICY IF EXISTS "admin read support_templates" ON public.support_templates;
+CREATE POLICY "admin read support_templates" ON public.support_templates FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -107,8 +107,8 @@ CREATE POLICY "admin read support_templates"
     )
   );
 
-CREATE POLICY "admin write support_templates"
-  ON public.support_templates FOR ALL
+DROP POLICY IF EXISTS "admin write support_templates" ON public.support_templates;
+CREATE POLICY "admin write support_templates" ON public.support_templates FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -119,7 +119,7 @@ CREATE POLICY "admin write support_templates"
 -- 4. Admin notes on support tickets
 CREATE TABLE IF NOT EXISTS public.ticket_admin_notes (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_id   UUID REFERENCES public.support_tickets(id) ON DELETE CASCADE NOT NULL,
+  ticket_id   text REFERENCES public.support_tickets(id) ON DELETE CASCADE NOT NULL,
   admin_id    UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   note        TEXT NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
@@ -127,8 +127,8 @@ CREATE TABLE IF NOT EXISTS public.ticket_admin_notes (
 
 ALTER TABLE public.ticket_admin_notes ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "admin read ticket notes"
-  ON public.ticket_admin_notes FOR SELECT
+DROP POLICY IF EXISTS "admin read ticket notes" ON public.ticket_admin_notes;
+CREATE POLICY "admin read ticket notes" ON public.ticket_admin_notes FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -136,8 +136,8 @@ CREATE POLICY "admin read ticket notes"
     )
   );
 
-CREATE POLICY "admin write ticket notes"
-  ON public.ticket_admin_notes FOR ALL
+DROP POLICY IF EXISTS "admin write ticket notes" ON public.ticket_admin_notes;
+CREATE POLICY "admin write ticket notes" ON public.ticket_admin_notes FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles

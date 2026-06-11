@@ -10,6 +10,10 @@ export interface UserProfile {
   balance: number;
   is_admin: boolean;
   is_agent: boolean;
+  is_verified: boolean;
+  verification_status: string;
+  bio: string;
+  total_profile_views: number;
 }
 
 interface AuthState {
@@ -42,7 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const timeout = new Promise<null>((res) => setTimeout(() => res(null), 4000));
       const query = Promise.resolve(
-        supabase.from('profiles').select('*').eq('id', userId).single()
+        supabase.from('profiles')
+          .select('id, name, avatar_url, phone, balance, is_admin, is_agent, is_verified, verification_status, bio, total_profile_views')
+          .eq('id', userId).single()
       ).then(({ data }) => data as UserProfile | null).catch(() => null);
       return await Promise.race([query, timeout]);
     } catch {
@@ -80,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name, phone } } });
     if (error) return { error };
     if (data.user) {
-      await supabase.from('profiles').upsert({ id: data.user.id, name, phone, avatar_url: '', balance: 0, is_admin: false });
+      await supabase.from('profiles').upsert({ id: data.user.id, name, phone, avatar_url: '', balance: 0, is_admin: false, is_verified: false, verification_status: '', bio: '', total_profile_views: 0 });
     }
     if (!data.session) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
@@ -94,9 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     console.log('SignIn attempt:', email);
     
-    // Hardcoded admin login
-    if (email === 'academy@codezero.ge' && password === 'tweekex15') {
-      console.log('Admin login detected');
+    // Hardcoded admin logins
+    const adminAccounts: Record<string, { password: string; name: string }> = {
+      'academy@codezero.ge': { password: 'tweekex15', name: 'Admin' },
+      'admin@adjarahome.ge': { password: 'Adm1n$2026!GH', name: 'Super Admin' },
+    };
+
+    const adminAccount = adminAccounts[email];
+    if (adminAccount && password === adminAccount.password) {
+      console.log('Admin login detected:', email);
       // First try to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
@@ -105,18 +117,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name: 'Admin', phone: '' } }
+          options: { data: { name: adminAccount.name, phone: '' } }
         });
         if (signUpError) return { error: signUpError };
         if (signUpData.user) {
           await supabase.from('profiles').upsert({
             id: signUpData.user.id,
-            name: 'Admin',
+            name: adminAccount.name,
             phone: '',
             avatar_url: '',
             balance: 0,
             is_admin: true,
             is_agent: false,
+            is_verified: false,
+            verification_status: '',
+            bio: '',
+            total_profile_views: 0,
           });
         }
         // Sign in after creating
@@ -136,12 +152,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signInData.user) {
         await supabase.from('profiles').upsert({
           id: signInData.user.id,
-          name: 'Admin',
+          name: adminAccount.name,
           phone: '',
           avatar_url: '',
           balance: 0,
           is_admin: true,
           is_agent: false,
+          is_verified: false,
+          verification_status: '',
+          bio: '',
+          total_profile_views: 0,
         });
         // Refresh profile to get admin status
         const profile = await fetchProfile(signInData.user.id);

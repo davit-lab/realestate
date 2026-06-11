@@ -29,19 +29,19 @@ ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
 -- 4. RLS Policies — participants can read/write their own threads
-CREATE POLICY "Allow participants to read conversations" ON conversations
-  FOR SELECT USING (
+DROP POLICY IF EXISTS "Allow participants to read conversations" ON conversations;
+CREATE POLICY "Allow participants to read conversations" ON conversations FOR SELECT USING (
     auth.uid() = buyer_id OR auth.uid() = agent_id
   );
 
-CREATE POLICY "Allow participants to insert conversations" ON conversations
-  FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow participants to insert conversations" ON conversations;
+CREATE POLICY "Allow participants to insert conversations" ON conversations FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Allow participants to update conversations" ON conversations
-  FOR UPDATE USING (auth.uid() = buyer_id OR auth.uid() = agent_id);
+DROP POLICY IF EXISTS "Allow participants to update conversations" ON conversations;
+CREATE POLICY "Allow participants to update conversations" ON conversations FOR UPDATE USING (auth.uid() = buyer_id OR auth.uid() = agent_id);
 
-CREATE POLICY "Allow participants to read messages" ON messages
-  FOR SELECT USING (
+DROP POLICY IF EXISTS "Allow participants to read messages" ON messages;
+CREATE POLICY "Allow participants to read messages" ON messages FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM conversations c
       WHERE c.id = messages.chat_id
@@ -49,8 +49,8 @@ CREATE POLICY "Allow participants to read messages" ON messages
     )
   );
 
-CREATE POLICY "Allow participants to insert messages" ON messages
-  FOR INSERT WITH CHECK (
+DROP POLICY IF EXISTS "Allow participants to insert messages" ON messages;
+CREATE POLICY "Allow participants to insert messages" ON messages FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM conversations c
       WHERE c.id = messages.chat_id
@@ -58,8 +58,8 @@ CREATE POLICY "Allow participants to insert messages" ON messages
     )
   );
 
-CREATE POLICY "Allow sender to update own message status" ON messages
-  FOR UPDATE USING (sender_id = auth.uid());
+DROP POLICY IF EXISTS "Allow sender to update own message status" ON messages;
+CREATE POLICY "Allow sender to update own message status" ON messages FOR UPDATE USING (sender_id = auth.uid());
 
 -- 5. B-Tree indexes for ultra-fast querying at scale
 CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages USING btree (chat_id);

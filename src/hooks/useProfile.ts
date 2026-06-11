@@ -9,6 +9,7 @@ export function useProfile(userId: string | undefined) {
     name?: string;
     phone?: string;
     avatar_url?: string;
+    bio?: string;
   }): Promise<{ error: string | null }> => {
     if (!isSupabaseConfigured || !userId) return { error: 'Not configured' };
     setSaving(true);
