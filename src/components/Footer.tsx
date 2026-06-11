@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Home,
   Mail,
@@ -11,7 +11,9 @@ import {
   ArrowUpRight,
   ChevronRight,
   MessageCircle,
+  CheckCircle,
 } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 const LINKS = {
   listings: [
@@ -50,6 +52,21 @@ interface FooterProps {
 
 export default function Footer({ onTermsClick, onPrivacyClick, onHelpClick }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const { showToast } = useToast();
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !email.includes('@')) {
+      showToast('გთხოვთ, შეიყვანეთ სწორი იმეილი', 'warning');
+      return;
+    }
+    setSubscribed(true);
+    showToast('თქვენ წარმატებით გამოიწერეთ!', 'success');
+    setEmail('');
+    setTimeout(() => setSubscribed(false), 4000);
+  };
 
   return (
     <footer className="bg-[#0F0F12] text-gray-300 border-t border-gray-800">
@@ -66,17 +83,24 @@ export default function Footer({ onTermsClick, onPrivacyClick, onHelpClick }: Fo
                 <p className="text-gray-500 text-xs mt-0.5">მიიღეთ პირველებმა საუკეთესო შეთავაზებები</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            <form onSubmit={handleSubscribe} className="flex items-center gap-2 w-full md:w-auto">
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="იმეილი"
-                className="flex-1 md:w-64 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors"
+                disabled={subscribed}
+                className="flex-1 md:w-64 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-ss-primary transition-colors disabled:opacity-50"
               />
-              <button className="bg-ss-primary hover:bg-ss-primary-dark text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer">
-                <Send size={13} />
-                გამოწერა
+              <button
+                type="submit"
+                disabled={subscribed}
+                className="bg-ss-primary hover:bg-ss-primary-dark disabled:bg-emerald-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                {subscribed ? <CheckCircle size={13} /> : <Send size={13} />}
+                {subscribed ? 'გამოიწერა!' : 'გამოწერა'}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

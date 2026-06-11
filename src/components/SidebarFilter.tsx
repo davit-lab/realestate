@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Globe, Sliders, X } from 'lucide-react';
 import { ListingType } from '../types';
 import { GEORGIAN_LOCATIONS } from '../data/georgianLocations';
+import SearchHistory from './SearchHistory';
+import RecentlyViewed from './RecentlyViewed';
+import MortgageCalculator from './MortgageCalculator';
+import { SearchHistoryItem } from '../hooks/useSearchHistory';
+import { RecentViewItem } from '../hooks/useRecentViews';
 
 interface SidebarFilterProps {
   selectedType: ListingType | 'all';
@@ -26,6 +31,16 @@ interface SidebarFilterProps {
   setPriceMax: (v: string) => void;
   selectedStatus: string;
   setSelectedStatus: (status: string) => void;
+  searchHistory?: SearchHistoryItem[];
+  onSearchHistorySelect?: (item: SearchHistoryItem) => void;
+  onSearchHistoryRemove?: (id: string) => void;
+  onSearchHistoryClear?: () => void;
+  recentViews?: RecentViewItem[];
+  onRecentViewSelect?: (id: string) => void;
+  onRecentViewRemove?: (id: string) => void;
+  onRecentViewsClear?: () => void;
+  showMortgageCalc?: boolean;
+  mortgagePropertyPrice?: number;
 }
 
 export default function SidebarFilter({
@@ -40,6 +55,16 @@ export default function SidebarFilter({
   priceMin, setPriceMin,
   priceMax, setPriceMax,
   selectedStatus, setSelectedStatus,
+  searchHistory,
+  onSearchHistorySelect,
+  onSearchHistoryRemove,
+  onSearchHistoryClear,
+  recentViews,
+  onRecentViewSelect,
+  onRecentViewRemove,
+  onRecentViewsClear,
+  showMortgageCalc,
+  mortgagePropertyPrice,
 }: SidebarFilterProps) {
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState('');

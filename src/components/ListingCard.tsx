@@ -1,8 +1,10 @@
 import React from 'react';
-import { Heart, MapPin, BedDouble, Maximize2, Eye, Building2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Heart, MapPin, BedDouble, Maximize2, Eye, Building2, Scale, Check } from 'lucide-react';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getAgentDiscountedPrice } from '../utils/pricing';
+import LazyImage from './LazyImage';
 
 interface ListingCardProps {
   key?: string;
@@ -12,6 +14,8 @@ interface ListingCardProps {
   currency: 'GEL' | 'USD';
   onCardClick: () => void;
   exchangeRate: number;
+  isCompareSelected?: boolean;
+  onCompareToggle?: (id: string, e: React.MouseEvent) => void;
 }
 
 const TYPE_LABELS: Record<string, { label: string; bg: string; text: string }> = {
@@ -28,6 +32,8 @@ export default function ListingCard({
   onFavoriteToggle,
   currency,
   onCardClick,
+  isCompareSelected,
+  onCompareToggle,
 }: ListingCardProps) {
   const { profile } = useAuth();
   const basePrice = currency === 'GEL' ? listing.priceLari : listing.priceUsd;
@@ -45,19 +51,22 @@ export default function ListingCard({
   const isAgentDiscount = profile?.is_agent && price !== basePrice;
 
   return (
-    <article
+    <motion.article
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
       onClick={onCardClick}
-      className={`group bg-white rounded-2xl overflow-hidden cursor-pointer flex flex-col transition-all duration-300
-        hover:-translate-y-0.5 hover:shadow-xl
-        ${isPro ? 'shadow-md shadow-amber-100 ring-1 ring-amber-300' : isTop ? 'shadow-md shadow-violet-100 ring-1 ring-violet-200' : 'shadow-sm border border-gray-200 hover:border-gray-300'}`}
+      className={`group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden cursor-pointer flex flex-col transition-all duration-300
+        hover:-translate-y-1 hover:shadow-xl
+        ${isPro ? 'shadow-md shadow-amber-100/50 dark:shadow-amber-900/20 ring-1 ring-amber-300 dark:ring-amber-700' : isTop ? 'shadow-md shadow-violet-100/50 dark:shadow-violet-900/20 ring-1 ring-violet-200 dark:ring-violet-700' : 'shadow-sm border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'}`}
     >
       {/* ── Image ── */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden bg-gray-100 shrink-0">
-        <img
+      <div className="relative w-full aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
+        <LazyImage
           src={listing.image}
           alt={listing.title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          referrerPolicy="no-referrer"
+          className="w-full h-full transition-transform duration-700 group-hover:scale-105"
+          placeholderColor="#e5e7eb"
         />
 
         {/* Gradient overlay at bottom */}
@@ -81,8 +90,21 @@ export default function ListingCard({
           </div>
         )}
 
-        {/* Favorite button */}
-        <div className="absolute top-3 right-3">
+        {/* Action buttons */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {onCompareToggle && (
+            <button
+              onClick={(e) => onCompareToggle(listing.id, e)}
+              title={isCompareSelected ? 'შედარებიდან ამოშლა' : 'შედარებაში დამატება'}
+              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-all ${
+                isCompareSelected
+                  ? 'bg-ss-primary text-white'
+                  : 'bg-white/90 backdrop-blur-sm text-gray-600 hover:bg-white hover:text-ss-primary'
+              }`}
+            >
+              {isCompareSelected ? <Check size={13} /> : <Scale size={13} />}
+            </button>
+          )}
           <button
             onClick={(e) => onFavoriteToggle(listing.id, e)}
             title="რჩეულებში"
@@ -113,30 +135,30 @@ export default function ListingCard({
       {/* ── Body ── */}
       <div className="px-4 pt-3.5 pb-3 flex flex-col gap-2 flex-1">
         {/* Title */}
-        <h3 className="text-[14px] font-bold text-gray-900 leading-snug line-clamp-1">
+        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-1">
           {listing.title}
         </h3>
 
         {/* Location */}
         <div className="flex items-center gap-1.5">
           <MapPin size={12} className="text-gray-400 shrink-0" />
-          <span className="text-[12px] text-gray-500 line-clamp-1">
+          <span className="text-[12px] text-gray-500 dark:text-gray-400 line-clamp-1">
             {listing.district}, {listing.city}
           </span>
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
-          <span className="flex items-center gap-1.5 text-[12px] text-gray-600 font-medium">
+        <div className="flex items-center gap-3 pt-1 border-t border-gray-100 dark:border-gray-800">
+          <span className="flex items-center gap-1.5 text-[12px] text-gray-600 dark:text-gray-400 font-medium">
             <BedDouble size={13} className="text-gray-400" />
             {listing.rooms} ოთ.
           </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-gray-600 font-medium">
+          <span className="flex items-center gap-1.5 text-[12px] text-gray-600 dark:text-gray-400 font-medium">
             <Maximize2 size={13} className="text-gray-400" />
             {listing.area} მ²
           </span>
-          <span className="flex items-center gap-1 text-[11px] text-gray-400 ml-auto">
-            <Eye size={11} className="text-gray-300" />
+          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 ml-auto">
+            <Eye size={11} className="text-gray-300 dark:text-gray-600" />
             {listing.viewCount || 0}
           </span>
         </div>
@@ -146,15 +168,15 @@ export default function ListingCard({
       <div className="px-4 pb-3.5 flex items-center gap-2.5">
         {listing.author.avatar ? (
           <img src={listing.author.avatar} alt={listing.author.name}
-            className="w-6 h-6 rounded-full object-cover border border-gray-200 shrink-0" />
+            className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-gray-700 shrink-0" />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
             <Building2 size={11} className="text-gray-400" />
           </div>
         )}
-        <span className="text-[11px] text-gray-400 font-medium truncate flex-1">{listing.author.name}</span>
-        <span className="text-[11px] text-gray-300 shrink-0">{listing.time}</span>
+        <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium truncate flex-1">{listing.author.name}</span>
+        <span className="text-[11px] text-gray-300 dark:text-gray-600 shrink-0">{listing.time}</span>
       </div>
-    </article>
+    </motion.article>
   );
 }

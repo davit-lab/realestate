@@ -77,7 +77,7 @@ export default function App() {
       favorites: '/favorites',
       messages: '/messages',
       profile: '/profile',
-      admin_panel: '/admin',
+      admin: '/admin',
       add_property: '/add-property',
       hotels: '/hotels',
       tourism: '/tourism',
@@ -423,12 +423,12 @@ export default function App() {
       <Header
         activeTab={activeTab}
         setActiveTab={(tab) => {
-          setActiveTab(tab);
+          setActiveTabWithUrl(tab);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         favoritesCount={favorites.length}
-        unreadMessagesCount={chats.length > 0 ? 1 : 0}
-        onAddListingClick={() => isAuthenticated ? setActiveTab('add_property') : setShowAuthModal(true)}
+        unreadMessagesCount={0}
+        onAddListingClick={() => isAuthenticated ? setActiveTabWithUrl('add_property') : setShowAuthModal(true)}
         userAvatar={profile?.avatar_url || userProfile.avatar}
         isAuthenticated={isAuthenticated}
         isAdmin={isAdmin}
@@ -624,7 +624,7 @@ export default function App() {
                         listings={filteredListings}
                         favorites={favorites}
                         currency={currency}
-                        onListingClick={(id) => { setSelectedListingId(id); setActiveTab('detail'); }}
+                        onListingClick={handleListingClick}
                         onFavoriteToggle={handleFavoriteToggle}
                       />
                     </div>
@@ -655,7 +655,7 @@ export default function App() {
                             onFavoriteToggle={handleFavoriteToggle}
                             currency={currency}
                             exchangeRate={exchangeRate}
-                            onCardClick={() => { setSelectedListingId(listing.id); setActiveTab('detail'); }}
+                            onCardClick={() => handleListingClick(listing.id)}
                           />
                         ))}
                       </div>
@@ -695,7 +695,7 @@ export default function App() {
             return (
               <ListingDetail
                 listing={currentObj}
-                onBackClick={() => setActiveTab('explore')}
+                onBackClick={() => setActiveTabWithUrl('explore')}
                 favorites={favorites}
                 onFavoriteToggle={handleFavoriteToggle}
                 currency={currency}
@@ -757,10 +757,7 @@ export default function App() {
                     onFavoriteToggle={handleFavoriteToggle}
                     currency={currency}
                     exchangeRate={exchangeRate}
-                    onCardClick={() => {
-                      setSelectedListingId(listing.id);
-                      setActiveTab('detail');
-                    }}
+                    onCardClick={() => handleListingClick(listing.id)}
                   />
                 ))}
               </div>
@@ -770,7 +767,7 @@ export default function App() {
 
         {/* Add Property page with Telegram/WhatsApp auto-fill */}
         {activeTab === 'add_property' && (
-          <AddProperty onBack={() => setActiveTab('explore')} />
+          <AddProperty onBack={() => setActiveTabWithUrl('explore')} />
         )}
 
         {/* Admin Panel — admin only */}
@@ -790,7 +787,7 @@ export default function App() {
         {activeTab === 'hotel_detail' && selectedHotel && (
           <HotelDetailPage
             hotel={selectedHotel}
-            onBack={() => setActiveTab('hotels')}
+            onBack={() => setActiveTabWithUrl('hotels')}
           />
         )}
 
@@ -803,18 +800,18 @@ export default function App() {
         {activeTab === 'tourism_detail' && selectedTourismItem && (
           <TourismDetailPage
             item={selectedTourismItem}
-            onBack={() => setActiveTab('tourism')}
+            onBack={() => setActiveTabWithUrl('tourism')}
           />
         )}
 
         {/* Terms page */}
         {activeTab === 'terms' && (
-          <TermsPage onBack={() => setActiveTab('explore')} />
+          <TermsPage onBack={() => setActiveTabWithUrl('explore')} />
         )}
 
         {/* Privacy page */}
         {activeTab === 'privacy' && (
-          <PrivacyPage onBack={() => setActiveTab('explore')} />
+          <PrivacyPage onBack={() => setActiveTabWithUrl('explore')} />
         )}
       </main>
 

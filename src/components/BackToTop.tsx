@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ArrowUp } from 'lucide-react';
 
 export default function BackToTop() {
@@ -10,15 +11,21 @@ export default function BackToTop() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  if (!visible) return null;
-
   return (
-    <button
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-lg text-gray-700 hover:text-ss-primary hover:border-ss-primary flex items-center justify-center transition-all cursor-pointer"
-      aria-label="ზემოთ"
-    >
-      <ArrowUp size={16} strokeWidth={2.5} />
-    </button>
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 10 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 w-11 h-11 rounded-2xl glass-panel-strong border border-gray-200/50 dark:border-gray-700/50 shadow-xl text-gray-700 dark:text-gray-200 hover:text-ss-primary dark:hover:text-ss-primary hover:border-ss-primary/50 flex items-center justify-center transition-colors cursor-pointer"
+          aria-label="ზემოთ"
+        >
+          <ArrowUp size={18} strokeWidth={2.5} />
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }
