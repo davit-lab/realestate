@@ -123,14 +123,6 @@ export default function HelpWidget() {
  };
  setMsgs(prev => [...prev, userMsg]);
 
- if (isSupabaseConfigured) {
-  await Promise.resolve(supabase.from('support_chats').insert({
-  user_id: user?.id ?? null,
-  user_name: profile?.name || tName || 'სტუმარი',
-  message: text,
-  })).then(() => null).catch(() => null);
- }
-
  setTimeout(() => {
   const reply = getBotReply(text);
   setMsgs(prev => [...prev, {

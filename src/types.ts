@@ -67,7 +67,25 @@ export type ActiveTab = 'explore' | 'detail' | 'profile' | 'favorites' | 'messag
 export type ProfileSubTab = 'balance_view' | 'balance_refill' | 'payment_methods' | 'my_listings';
 
 // ── Admin Panel Types ──
-export type AdminSubTab = 'dashboard' | 'listings' | 'users' | 'transactions' | 'packages' | 'chats' | 'support' | 'templates' | 'site';
+export type AdminSubTab = 'dashboard' | 'listings' | 'users' | 'transactions' | 'packages' | 'chats' | 'support' | 'templates' | 'site' | 'payments';
+
+export type PaymentProviderType = 'bog_ipay' | 'flitt' | 'tbc_opay' | 'other';
+
+export interface PaymentProvider {
+  id: string;
+  provider_type: PaymentProviderType;
+  name: string;
+  description: string;
+  is_active: boolean;
+  callback_url: string;
+  client_id: string;
+  merchant_id: string;
+  secret_key: string;
+  terminal_id: string;
+  extra_config?: Record<string, string>;
+  updated_at: string;
+  created_at: string;
+}
 
 export type TransactionType = 'refill' | 'deduct' | 'package_purchase' | 'package_refund' | 'listing_fee';
 

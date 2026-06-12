@@ -188,10 +188,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
  const generatePasswordResetLink = useCallback(async (email: string) => {
  if (!isSupabaseConfigured) return { error: { message: 'Supabase not configured', name: 'AuthError', status: 500 } as AuthError };
- const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${window.location.origin}/`,
- });
- return { data, error };
+ try {
+  const apiUrl = import.meta.env.VITE_API_URL || `http://localhost:${import.meta.env.VITE_WEBHOOK_PORT || 3001}`;
+  const response = await fetch(`${apiUrl}/api/send-password-reset`, {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ email, redirectTo: `${window.location.origin}/` }),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+   return { error: { message: result.error || 'Failed to send reset email', name: 'AuthError', status: response.status } as AuthError };
+  }
+  return { data: result, error: null };
+ } catch (err: any) {
+  return { error: { message: err.message, name: 'AuthError', status: 500 } as AuthError };
+ }
  }, []);
 
  return (

@@ -201,8 +201,11 @@ export default function App() {
  }
  }, [activeTab, selectedListingId, listings]);
 
- // Persist user data to localStorage
- useEffect(() => { localStorage.setItem('adjarahome_listings', JSON.stringify(listings)); }, [listings]);
+ // Persist user data to localStorage (localListings only; dbListings fetched from Supabase)
+ useEffect(() => {
+  try { localStorage.setItem('adjarahome_listings', JSON.stringify(localListings)); }
+  catch (e) { console.warn('[localStorage] listings persist failed:', e); }
+ }, [localListings]);
  useEffect(() => { localStorage.setItem('adjarahome_cards', JSON.stringify(paymentCards)); }, [paymentCards]);
  useEffect(() => { localStorage.setItem('adjarahome_profile', JSON.stringify(userProfile)); }, [userProfile]);
  useEffect(() => { localStorage.setItem('adjarahome_chats', JSON.stringify(chats)); }, [chats]);

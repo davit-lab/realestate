@@ -10,12 +10,22 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { Resend } from 'resend';
 
 dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Simple CORS for frontend -> API communication
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 
 const PORT = process.env.WEBHOOK_PORT || 3001;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -39,6 +49,7 @@ const supabase = createClient(
 );
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SYSTEM_PROMPT = `You are a strict real-estate data extraction engine.
 Parse the user's unstructured Georgian (or mixed) message into a valid JSON object.
@@ -186,9 +197,64 @@ app.post('/webhook/whatsapp', requireSecret, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/send-password-reset
+ * Generates a Supabase recovery link and sends it via Resend (custom SMTP).
+ * Body: { email: string, redirectTo?: string }
+ */
+app.post('/api/send-password-reset', async (req, res) => {
+  try {
+    const { email, redirectTo } = req.body;
+    if (!email) {
+      return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ ok: false, error: 'RESEND_API_KEY not configured' });
+    }
+
+    const defaultRedirect = process.env.APP_URL || `http://localhost:${PORT}`;
+    const targetRedirect = redirectTo || defaultRedirect;
+
+    // Generate recovery link via Supabase Admin API
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: targetRedirect },
+    });
+
+    if (error) {
+      console.error('[email] Supabase generateLink error:', error);
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+
+    const actionLink = data.properties.action_link;
+    const fromEmail = process.env.FROM_EMAIL || 'noreply@adjarahome.ge';
+
+    await resend.emails.send({
+      from: fromEmail,
+      to: email,
+      subject: 'პაროლის აღდგენა — AdjaraHome',
+      html: `
+        <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+          <h2 style="color:#111827;">პაროლის აღდგენა</h2>
+          <p style="color:#4b5563;">პაროლის შესაცვლელად დააჭირეთ ქვემოთ მოცემულ ღილაკს:</p>
+          <a href="${actionLink}" style="display:inline-block;background:#111827;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">პაროლის აღდგენა</a>
+          <p style="color:#9ca3af;font-size:12px;margin-top:24px;">თუ თქვენ არ მოგითხოვიათ პაროლის აღდგენა, უბრალოდ უგულებელყავით ეს წერილი.</p>
+        </div>
+      `,
+    });
+
+    console.log(`[email] Password reset sent to ${email}`);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[email] Password reset error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get('/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 app.listen(PORT, () => {
   console.log(`Webhook server listening on http://localhost:${PORT}`);
-  console.log(`Endpoints: POST /webhook/telegram | POST /webhook/whatsapp | GET /health`);
+  console.log(`Endpoints: POST /webhook/telegram | POST /webhook/whatsapp | GET /health | POST /api/send-password-reset`);
 });

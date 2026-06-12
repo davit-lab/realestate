@@ -134,6 +134,7 @@ VALUES ('chat-images', 'chat-images', true, 5242880, ARRAY['image/jpeg', 'image/
 ON CONFLICT (id) DO NOTHING;
 
 -- 9. Storage RLS — allow participants to upload/read their own chat images
+DROP POLICY IF EXISTS "Allow participants to upload chat images" ON storage.objects;
 CREATE POLICY "Allow participants to upload chat images"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -145,6 +146,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Allow anyone to read chat images" ON storage.objects;
 CREATE POLICY "Allow anyone to read chat images"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'chat-images');
