@@ -7,7 +7,7 @@ interface Props {
  users: AdminUserExtended[];
  loading: boolean;
  onRefresh: () => void;
- onAssign: (uid: string, ptype: 'vip'|'vip_plus'|'super_vip', listings: number, days: number) => void;
+ onAssign: (uid: string, ptype: 'basic'|'super'|'premium', listings: number, days: number) => void;
  onRevoke: (pid: string) => void;
  isDark: boolean; txtMain: string; txtSub: string; bgCard: string; brdCard: string;
  search: string;
@@ -15,14 +15,14 @@ interface Props {
 
 export default function PackagesTab({ packages, users, loading, onRefresh, onAssign, onRevoke, isDark, txtMain, txtSub, bgCard, brdCard, search }: Props) {
  const [modal, setModal] = useState<{userId:string}|null>(null);
- const [ptype, setPtype] = useState<'vip'|'vip_plus'|'super_vip'>('vip');
+ const [ptype, setPtype] = useState<'basic'|'super'|'premium'>('basic');
  const [listings, setListings] = useState('5');
  const [days, setDays] = useState('30');
 
  const filtered = packages.filter(p => !search || (p.user_name || '').toLowerCase().includes(search.toLowerCase()));
 
  const pkgLabel = (t: string) => {
- switch(t) { case 'vip': return 'VIP'; case 'vip_plus': return 'VIP+'; case 'super_vip': return 'Super VIP'; }
+ switch(t) { case 'basic': return 'Basic'; case 'super': return 'Super'; case 'premium': return 'Premium'; }
  return t;
  };
 
@@ -45,7 +45,7 @@ export default function PackagesTab({ packages, users, loading, onRefresh, onAss
     {filtered.map(p=>(
      <tr key={p.id} className={`border-b last:border-0 ${isDark?'border-[#2A2A32]':'border-gray-50'}`}>
      <td className={`px-4 py-2 text-xs font-semibold ${txtMain}`}>{p.user_name||'უცნობი'}</td>
-     <td className="px-4 py-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white`} style={{background:p.package_type==='super_vip'?'#7C3AED':p.package_type==='vip_plus'?'#A78BFA':'#C4B5FD',color:p.package_type==='vip'?'#4B5563':'#fff'}}>{pkgLabel(p.package_type)}</span></td>
+     <td className="px-4 py-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white`} style={{background:p.package_type==='premium'?'#d97706':p.package_type==='super'?'#059669':'#475569'}}>{pkgLabel(p.package_type)}</span></td>
      <td className={`px-4 py-2 text-xs ${txtSub}`}>{p.listings_remaining}/{p.total_listings}</td>
      <td className={`px-4 py-2 text-xs ${txtSub}`}>{p.expires_at?new Date(p.expires_at).toLocaleDateString('ka-GE'):'—'}</td>
      <td className="px-4 py-2"><button onClick={()=>onRevoke(p.id)} className="text-rose-400 hover:text-rose-600 p-1 hover:bg-rose-50 rounded-lg cursor-pointer"><Trash2 size={12}/></button></td>
@@ -70,8 +70,8 @@ export default function PackagesTab({ packages, users, loading, onRefresh, onAss
    </select>
    <label className={`text-[11px] font-semibold mb-1 block ${txtSub}`}>პაკეტი</label>
    <div className="flex gap-1 mb-2">
-    {(['vip','vip_plus','super_vip'] as const).map(t=> (
-    <button key={t} onClick={()=>setPtype(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${ptype===t?'text-white':'text-gray-500'}`} style={ptype===t?{background:'#7C3AED'}:{background:isDark?'#25252B':'#F3F4F6'}}>{t==='vip'?'VIP':t==='vip_plus'?'VIP+':'Super'}</button>
+    {(['basic','super','premium'] as const).map(t=> (
+    <button key={t} onClick={()=>setPtype(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${ptype===t?'text-white':'text-gray-500'}`} style={ptype===t?{background:t==='premium'?'#d97706':t==='super'?'#059669':'#475569'}:{background:isDark?'#25252B':'#F3F4F6'}}>{t==='basic'?'Basic':t==='super'?'Super':'Premium'}</button>
     ))}
    </div>
    <div className="flex gap-2 mb-3">

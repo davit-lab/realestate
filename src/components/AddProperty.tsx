@@ -45,6 +45,8 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
  const [pickedLng, setPickedLng] = useState<number | null>(null);
  const [showMapPicker, setShowMapPicker] = useState(false);
 
+ const [selectedPackage, setSelectedPackage] = useState<'basic' | 'super' | 'premium' | null>(null);
+
  const [form, setForm] = useState({
  title: '',
  property_type: 'apartment',
@@ -145,6 +147,15 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
   setSubmitError('გთხოვთ მონიშნოთ მდებარეობა რუკაზე (აუცილებელია).');
   return;
  }
+ if (!selectedPackage) {
+  setSubmitError('აირჩიეთ პაკეტი განცხადების დასადებად.');
+  return;
+ }
+ const pkgPrice = selectedPackage === 'premium' ? 8 : selectedPackage === 'super' ? 3 : 1;
+ if ((profile?.balance ?? 0) < pkgPrice) {
+  setSubmitError(`ბალანსი არ არის. საჭიროა ${pkgPrice} ₾`);
+  return;
+ }
  setIsSubmitting(true);
 
  try {
@@ -178,8 +189,14 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
   images: finalImages,
   lat: pickedLat,
   lng: pickedLng,
-  status: 'live'
+  status: 'live',
+  vip_status: selectedPackage
   };
+
+  if (profile?.balance != null) {
+   const newBal = Math.max(0, profile.balance - pkgPrice);
+   await supabase.from('profiles').update({ balance: newBal }).eq('id', user.id);
+  }
 
   const { error } = await supabase.from('properties').insert(payload);
   if (error) throw error;
@@ -539,6 +556,31 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
     className="w-full bg-white/70 border border-white/80 rounded-2xl py-3 pl-10 pr-4 text-[15px] text-gray-900 placeholder-gray-400 outline-none focus:bg-white/90 focus:shadow-lg focus:shadow-stone-200/40 transition-all duration-300"
     />
    </div>
+   </div>
+
+   {/* Package selection */}
+   <div className="space-y-2">
+    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">პაკეტის არჩევა</label>
+    <div className="grid grid-cols-3 gap-2">
+     {([
+      { id: 'basic', name: 'ბეისიქი', price: 1, color: 'bg-slate-600', border: 'border-slate-500' },
+      { id: 'super', name: 'სუპერი', price: 3, color: 'bg-emerald-600', border: 'border-emerald-500' },
+      { id: 'premium', name: 'პრემიუმი', price: 8, color: 'bg-amber-600', border: 'border-amber-500' },
+     ] as const).map((pkg) => (
+      <button
+       key={pkg.id}
+       type="button"
+       onClick={() => setSelectedPackage(pkg.id)}
+       className={`flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all cursor-pointer ${
+        selectedPackage === pkg.id ? pkg.border + ' shadow-md ' + pkg.color + ' text-white' : 'border-gray-200 hover:border-gray-400 bg-white text-gray-700'
+       }`}
+      >
+       <span className="text-[10px] font-black">{pkg.name.toUpperCase()}</span>
+       <span className="text-[13px] font-black">{pkg.price} ₾</span>
+      </button>
+     ))}
+    </div>
+    <p className="text-[11px] text-gray-400 ml-1">თითოეული პაკეტი ერთ განცხადებაზე მოქმედებს</p>
    </div>
 
    {/* Inline error */}

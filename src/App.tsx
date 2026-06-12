@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { HelpCircle, Search, ChevronDown, Check, LayoutGrid, Map, MapPin, Scale } from 'lucide-react';
 import { Listing, ListingType, PaymentCard, ActiveTab } from './types';
-import { exchangeRate } from './data/mockData';
+import { EXCHANGE_RATE as exchangeRate } from './lib/constants';
 import { GEORGIAN_LOCATIONS } from './data/georgianLocations';
 import Header from './components/Header';
 import SidebarFilter from './components/SidebarFilter';

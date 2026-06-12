@@ -4,6 +4,8 @@
 create table if not exists public.support_tickets (
   id              text primary key default gen_random_uuid()::text,
   user_id         uuid references auth.users(id) on delete set null,
+  name            text default 'სტუმარი',
+  email           text,
   subject         text not null,
   message         text not null,
   status          text default 'open', -- open, in_progress, resolved, closed

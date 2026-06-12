@@ -95,6 +95,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  const [pickedLng, setPickedLng] = useState<number | null>(null);
  const [showMapPicker, setShowMapPicker] = useState(false);
  const [mapError, setMapError] = useState('');
+ const [selectedPackage, setSelectedPackage] = useState<'basic' | 'super' | 'premium' | null>(null);
 
  // Hotel state
  const [hotel, setHotel] = useState({ name: '', stars: 4, city: 'ბათუმი', district: '', pricePerNight: '', amenities: [] as string[], checkin: '14:00', checkout: '12:00', description: '', phone: '', website: '' });
@@ -108,6 +109,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
   setPickedLng(null);
   setShowMapPicker(false);
   setMapError('');
+  setSelectedPackage(null);
  }
  }, [isOpen]);
 
@@ -143,6 +145,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  if (section === 'real_estate') {
   if (!re.priceGel || !re.area) { alert('შეავსეთ ფასი და ფართობი'); return; }
   if (pickedLat == null || pickedLng == null) { setMapError('გთხოვთ მონიშნოთ მდებარეობა რუკაზე'); return; }
+  if (!selectedPackage) { alert('აირჩიეთ პაკეტი'); return; }
   const priceLari = parseFloat(re.priceGel) || 0;
   const newListing: Listing = {
   id: `custom-${Date.now()}`,
@@ -152,7 +155,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
   location: [re.street, re.district, re.city].filter(Boolean).join(', '),
   district: re.district || re.city, city: re.city,
   rooms: re.rooms, beds: parseInt(re.beds) || 2, area: parseFloat(re.area) || 0,
-  vipStatus: 'standard', image: images[0] || '', images,
+  vipStatus: selectedPackage, image: images[0] || '', images,
   time: 'ახლახან',
   author: { name: 'მომხმარებელი', phone: re.phone || '599 00 00 00', avatar: '', isAgent: false, listingCount: 1 },
   condition: re.condition, status: re.status,
@@ -185,7 +188,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
    lng: pickedLng,
    images: newListing.images || [],
    status: 'live',
-   vip_status: 'standard',
+   vip_status: selectedPackage,
    author_name: user?.user_metadata?.name || 'მომხმარებელი',
    author_avatar: '',
   };
@@ -382,11 +385,34 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
    <Field label="ტელეფონი">
     <input value={re.phone} onChange={e=>setRe(p=>({...p,phone:e.target.value}))} placeholder="599 12 34 56" className={inp()} />
    </Field>
+   <div className="space-y-2">
+    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">პაკეტის არჩევა</label>
+    <div className="grid grid-cols-3 gap-2">
+     {([
+      { id: 'basic', name: 'ბეისიქი', price: 1, color: 'bg-slate-600', border: 'border-slate-500' },
+      { id: 'super', name: 'სუპერი', price: 3, color: 'bg-emerald-600', border: 'border-emerald-500' },
+      { id: 'premium', name: 'პრემიუმი', price: 8, color: 'bg-amber-600', border: 'border-amber-500' },
+     ] as const).map((pkg) => (
+      <button
+       key={pkg.id}
+       type="button"
+       onClick={() => setSelectedPackage(pkg.id)}
+       className={`flex flex-col items-center gap-1 rounded-xl border-2 p-2.5 transition-all cursor-pointer ${
+        selectedPackage === pkg.id ? pkg.border + ' shadow-md ' + pkg.color + ' text-white' : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+       }`}
+      >
+       <span className="text-[9px] font-black">{pkg.name.toUpperCase()}</span>
+       <span className="text-[12px] font-black">{pkg.price} ₾</span>
+      </button>
+     ))}
+    </div>
+   </div>
+
    <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
     <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-[13px] font-semibold hover:bg-gray-50 cursor-pointer">გაუქმება</button>
     <button
     type="submit"
-    disabled={pickedLat == null || pickedLng == null}
+    disabled={pickedLat == null || pickedLng == null || !selectedPackage}
     className="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-[13px] font-bold cursor-pointer transition-colors"
     >
     გამოქვეყნება

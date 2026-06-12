@@ -62,6 +62,16 @@ CREATE POLICY "Allow participants to insert messages" ON messages FOR INSERT WIT
 DROP POLICY IF EXISTS "Allow sender to update own message status" ON messages;
 CREATE POLICY "Allow sender to update own message status" ON messages FOR UPDATE USING (sender_id = auth.uid());
 
+-- 4b. Admin policies — full read + message delete for moderation
+DROP POLICY IF EXISTS "Allow admin to read all conversations" ON conversations;
+CREATE POLICY "Allow admin to read all conversations" ON conversations FOR SELECT USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow admin to read all messages" ON messages;
+CREATE POLICY "Allow admin to read all messages" ON messages FOR SELECT USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Allow admin to delete messages" ON messages;
+CREATE POLICY "Allow admin to delete messages" ON messages FOR DELETE USING (public.is_admin());
+
 -- 5. B-Tree indexes for ultra-fast querying at scale
 CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages USING btree (chat_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages USING btree (created_at DESC);

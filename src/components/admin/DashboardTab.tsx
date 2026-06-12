@@ -49,9 +49,9 @@ export default function DashboardTab({ stats, localListings, dbListings, onDelet
  }, [dbListings, localListings]);
 
  const vipData = useMemo(() => [
- { name: 'VIP', sales: Math.floor(Math.random() * 30) + 10 },
- { name: 'VIP+', sales: Math.floor(Math.random() * 20) + 5 },
- { name: 'Super VIP', sales: Math.floor(Math.random() * 10) + 2 },
+ { name: 'Basic', sales: Math.floor(Math.random() * 30) + 10 },
+ { name: 'Super', sales: Math.floor(Math.random() * 20) + 5 },
+ { name: 'Premium', sales: Math.floor(Math.random() * 10) + 2 },
  ], []);
 
  const tooltipStyle = { background: isDark ? '#1A1A1E' : '#fff', border: `1px solid ${isDark ? '#2A2A32' : '#E5E7EB'}`, borderRadius: 12, color: isDark ? '#fff' : '#111' };

@@ -44,7 +44,7 @@ export default function ListingsTab({ listings, loading, onRefresh, onDelete, on
      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${l.status === 'live' ? 'bg-emerald-50 text-emerald-700' : isDark ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-50 text-amber-700'}`}>{l.status || '—'}</span>
      </td>
      <td className="px-5 py-2.5">
-     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${l.vip_status === 'super_vip' ? 'text-white' : l.vip_status === 'vip+' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`} style={l.vip_status === 'super_vip' ? { background: '#7C3AED' } : {}}>{l.vip_status || '—'}</span>
+     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white`} style={{background:l.vip_status==='premium'?'#d97706':l.vip_status==='super'?'#059669':l.vip_status==='basic'?'#475569':'#E5E7EB',color:l.vip_status? '#fff' : '#374151'}}>{l.vip_status?.toUpperCase() || '—'}</span>
      </td>
      <td className={`px-5 py-2.5 text-xs ${txtSub}`}>{l.city || '—'}</td>
      <td className={`px-5 py-2.5 text-xs ${txtSub}`}>{l.created_at ? fmtDate(l.created_at) : '—'}</td>

@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export interface UserPackage {
   id: string;
-  package_type: 'vip' | 'vip_plus' | 'super_vip';
+  package_type: 'basic' | 'super' | 'premium';
   listings_remaining: number;
   total_listings: number;
   expires_at: string;
