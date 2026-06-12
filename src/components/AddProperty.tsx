@@ -360,7 +360,7 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
     type="text"
     value={form.title}
     onChange={e => updateField('title', e.target.value)}
-    placeholder="მაგ. 3 ოთახიანი ბინა ვაკეში"
+    placeholder={form.property_type === 'land' ? "მაგ. 500 მ² მიწის ნაკვეთი ბათუმში" : "მაგ. 3 ოთახიანი ბინა ვაკეში"}
     className="w-full bg-white/70 border border-white/80 rounded-2xl py-3 px-4 text-[15px] text-gray-900 placeholder-gray-400 outline-none focus:bg-white/90 focus:shadow-lg focus:shadow-stone-200/40 transition-all duration-300"
    />
    </div>
@@ -462,13 +462,13 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
    </div>
 
    {/* Parameters Grid */}
-   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 ${form.property_type === 'land' ? 'sm:grid-cols-2' : ''}`}>
    {[
     { key: 'rooms', label: 'ოთახი', icon: <BedDouble size={12} />, placeholder: '3' },
     { key: 'area_sqm', label: 'ფართობი', icon: <Ruler size={12} />, placeholder: '85 მ²' },
     { key: 'floor', label: 'სართული', icon: <Home size={12} />, placeholder: '4' },
     { key: 'total_floors', label: 'სულ სართ.', icon: <Home size={12} />, placeholder: '12' },
-   ].map(field => (
+   ].filter(field => form.property_type !== 'land' || field.key === 'area_sqm').map(field => (
     <div key={field.key} className="space-y-1.5">
     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-1">
      {field.icon}{field.label}

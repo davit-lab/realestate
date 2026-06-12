@@ -46,8 +46,9 @@ export default function ListingCard({
  const perSqm = Math.round(price / listing.area).toLocaleString('en-US', { maximumFractionDigits: 0 });
  const sym = currency === 'GEL' ? '₾' : '$';
  const typeInfo = TYPE_LABELS[listing.type] ?? { label: listing.type, bg: 'bg-gray-700/90', text: 'text-white' };
- const isPro = listing.vipStatus === 'super_vip';
- const isTop = listing.vipStatus === 'vip+';
+ const isPremium = listing.vipStatus === 'premium';
+ const isSuper = listing.vipStatus === 'super';
+ const isBasic = listing.vipStatus === 'basic';
  const isAgentDiscount = profile?.is_agent && price !== basePrice;
 
  return (
@@ -58,7 +59,7 @@ export default function ListingCard({
   onClick={onCardClick}
   className={`group bg-white rounded-2xl overflow-hidden cursor-pointer flex flex-col transition-all duration-300
   hover:-translate-y-1 hover:shadow-xl
-  ${isPro ? 'shadow-md shadow-amber-100/50 ring-1 ring-amber-300 ' : isTop ? 'shadow-md shadow-violet-100/50 ring-1 ring-violet-200 ' : 'shadow-sm border border-gray-200 hover:border-gray-300 :border-gray-700'}`}
+  ${isPremium ? 'shadow-md shadow-amber-100/50 ring-1 ring-amber-300 ' : isSuper ? 'shadow-md shadow-emerald-100/50 ring-1 ring-emerald-200 ' : isBasic ? 'shadow-md shadow-slate-100/50 ring-1 ring-slate-200 ' : 'shadow-sm border border-gray-200 hover:border-gray-300 :border-gray-700'}`}
  >
   {/* ── Image ── */}
   <div className="relative w-full aspect-[4/3] overflow-hidden bg-gray-100 shrink-0">
@@ -79,13 +80,13 @@ export default function ListingCard({
    </span>
   </div>
 
-  {/* VIP badge */}
-  {(isPro || isTop) && (
+  {/* Package badge */}
+  {(isPremium || isSuper || isBasic) && (
    <div className="absolute top-3 left-1/2 -translate-x-1/2">
    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full tracking-widest shadow-sm ${
-    isPro ? 'bg-amber-400 text-gray-900' : 'bg-violet-600 text-white'
+    isPremium ? 'bg-amber-600 text-white' : isSuper ? 'bg-emerald-600 text-white' : 'bg-slate-500 text-white'
    }`}>
-    {isPro ? '⭐ VIP' : '🔷 TOP'}
+    {isPremium ? 'PREMIUM' : isSuper ? 'SUPER' : 'BASIC'}
    </span>
    </div>
   )}
@@ -149,10 +150,12 @@ export default function ListingCard({
 
   {/* Stats row */}
   <div className="flex items-center gap-3 pt-1 border-t border-gray-100 ">
+   {listing.property_type !== 'land' && (
    <span className="flex items-center gap-1.5 text-[12px] text-gray-600 font-medium">
    <BedDouble size={13} className="text-gray-400" />
    {listing.rooms} ოთ.
    </span>
+   )}
    <span className="flex items-center gap-1.5 text-[12px] text-gray-600 font-medium">
    <Maximize2 size={13} className="text-gray-400" />
    {listing.area} მ²

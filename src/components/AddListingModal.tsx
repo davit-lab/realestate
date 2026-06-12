@@ -160,7 +160,8 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
   priceLevel: priceLari > 1500000 ? 'high' : priceLari < 300000 ? 'cheap' : 'average',
   coordinates: { x: 35 + Math.random() * 30, y: 35 + Math.random() * 30 }, comments: [],
   lat: pickedLat, lng: pickedLng,
-  user_id: user?.id
+  user_id: user?.id,
+  property_type: re.propType
   };
   // Insert to Supabase if configured
   if (isSupabaseConfigured && user?.id) {
@@ -293,7 +294,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
    <PhotoUploader images={images} onAdd={handleAddImages} onRemove={handleRemoveImage} />
 
    <Field label="სათაური">
-    <input value={re.title} onChange={e=>setRe(p=>({...p,title:e.target.value}))} placeholder="მაგ. 3-ოთახიანი ბინა ვაკეში, 85 მ²" className={inp()} />
+    <input value={re.title} onChange={e=>setRe(p=>({...p,title:e.target.value}))} placeholder={re.propType === 'land' ? "მაგ. 500 მ² მიწის ნაკვეთი ბათუმში" : "მაგ. 3-ოთახიანი ბინა ვაკეში, 85 მ²"} className={inp()} />
    </Field>
    <div className="grid grid-cols-2 gap-2.5">
     <Field label="ქალაქი">
@@ -344,8 +345,10 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
     )}
    </div>
 
-   <div className="grid grid-cols-4 gap-2">
-    {[{k:'rooms',l:'ოთახი',ph:'3'},{k:'beds',l:'საძინ.',ph:'2'},{k:'area',l:'ფართობი',ph:'85'},{k:'floor',l:'სართ.',ph:'4/12'}].map(f=>(
+   <div className={`grid gap-2 ${re.propType === 'land' ? 'grid-cols-1' : 'grid-cols-4'}`}>
+    {[{k:'rooms',l:'ოთახი',ph:'3'},{k:'beds',l:'საძინ.',ph:'2'},{k:'area',l:'ფართობი',ph:'85'},{k:'floor',l:'სართ.',ph:'4/12'}]
+     .filter(f => re.propType !== 'land' || f.k === 'area')
+     .map(f=>(
     <React.Fragment key={f.k}>
      <Field label={f.l}>
      <input value={(re as any)[f.k]} onChange={e=>setRe(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} className={inp('text-center')} />
@@ -353,6 +356,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
     </React.Fragment>
     ))}
    </div>
+   {re.propType !== 'land' && (
    <div className="grid grid-cols-2 gap-2.5">
     <Field label="სტატუსი">
     <select value={re.status} onChange={e=>setRe(p=>({...p,status:e.target.value}))} className={inp()}>
@@ -365,6 +369,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
     </select>
     </Field>
    </div>
+   )}
    <textarea rows={3} value={re.description} onChange={e=>setRe(p=>({...p,description:e.target.value}))} placeholder="აღწერა — ლოკაცია, უპირატესობები, ინფრასტრუქტურა..." className={inp('resize-none')} />
    <div className="grid grid-cols-2 gap-2.5">
     <Field label="ფასი ₾">

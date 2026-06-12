@@ -262,14 +262,20 @@ export default function App() {
  setListings([newListing, ...listings]);
  setUserProfile((prev) => ({
   ...prev,
-  balance: Math.max(0, prev.balance - (newListing.vipStatus === 'super_vip' ? 25 : newListing.vipStatus === 'vip+' ? 10 : 0)),
+  balance: Math.max(0, prev.balance - (newListing.vipStatus === 'premium' ? 8 : newListing.vipStatus === 'super' ? 3 : newListing.vipStatus === 'basic' ? 1 : 0)),
  }));
+ const _pkgPrice = newListing.vipStatus === 'premium' ? 8 : newListing.vipStatus === 'super' ? 3 : newListing.vipStatus === 'basic' ? 1 : 0;
+ if (isSupabaseConfigured && user?.id && _pkgPrice > 0) {
+  const { data: prof } = await supabase.from('profiles').select('balance').eq('id', user.id).single();
+  const newBal = Math.max(0, (prof?.balance ?? 0) - _pkgPrice);
+  await supabase.from('profiles').update({ balance: newBal }).eq('id', user.id);
+ }
  // Also insert into Supabase
  if (isSupabaseConfigured) {
   const { error } = await supabase.from('properties').insert({
   title: newListing.title,
   deal_type: newListing.type,
-  property_type: newListing.condition || 'apartment',
+  property_type: newListing.property_type || 'apartment',
   location: newListing.location,
   city: newListing.city,
   district: newListing.district,
@@ -443,9 +449,9 @@ export default function App() {
   return b.id.localeCompare(a.id);
   }
   const boostRank = (vip: string | undefined) => {
-  if (vip === 'super_vip') return 3;
-  if (vip === 'vip+') return 2;
-  if (vip === 'vip') return 1;
+  if (vip === 'premium') return 3;
+  if (vip === 'super') return 2;
+  if (vip === 'basic') return 1;
   return 0;
   };
   return boostRank(b.vipStatus) - boostRank(a.vipStatus);

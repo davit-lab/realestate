@@ -1,5 +1,5 @@
 export type ListingType = 'mortgage' | 'pledge' | 'rent' | 'daily_rent' | 'sale'; // იპოთეკა, გირავდება, ქირავდება, ქირავდება დღიურად, იყიდება
-export type VipStatus = 'vip+' | 'super_vip' | 'standard';
+export type VipStatus = 'basic' | 'super' | 'premium' | 'standard';
 
 export interface Author {
   name: string;
@@ -50,6 +50,7 @@ export interface Listing {
   lng?: number; // Real WGS-84 longitude (from map picker)
   viewCount?: number; // Number of unique views
   user_id?: string; // Auth user id who created the listing
+  property_type?: string; // apartment, house, land, commercial, hotel, cottage
 }
 
 export interface PaymentCard {
@@ -85,7 +86,7 @@ export interface UserPackage {
   id: string;
   user_id: string;
   user_name?: string;
-  package_type: 'vip' | 'vip_plus' | 'super_vip';
+  package_type: 'basic' | 'super' | 'premium';
   listings_remaining: number;
   total_listings: number;
   assigned_by?: string;

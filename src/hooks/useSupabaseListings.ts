@@ -39,6 +39,7 @@ function mapRow(row: any): Listing {
     lat: row.lat  != null ? Number(row.lat)  : undefined,
     lng: row.lng != null ? Number(row.lng) : undefined,
     user_id: row.user_id ?? undefined,
+    property_type: row.property_type || undefined,
   };
 }
 

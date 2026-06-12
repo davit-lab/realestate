@@ -33,11 +33,24 @@ DROP POLICY IF EXISTS "own profile read" ON public.profiles;
 CREATE POLICY "own profile read" ON public.profiles FOR select
   using (auth.uid() = id);
 
+-- Users can insert their own profile (needed for upsert/signup fallback)
+drop policy if exists "own profile insert" on public.profiles;
+DROP POLICY IF EXISTS "own profile insert" ON public.profiles;
+CREATE POLICY "own profile insert" ON public.profiles FOR insert
+  WITH CHECK (auth.uid() = id);
+
 -- Users can update their own profile
 drop policy if exists "own profile update" on public.profiles;
 DROP POLICY IF EXISTS "own profile update" ON public.profiles;
 CREATE POLICY "own profile update" ON public.profiles FOR update
-  using (auth.uid() = id);
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Users can delete their own profile
+drop policy if exists "own profile delete" on public.profiles;
+DROP POLICY IF EXISTS "own profile delete" ON public.profiles;
+CREATE POLICY "own profile delete" ON public.profiles FOR delete
+  USING (auth.uid() = id);
 
 -- Admins can read all profiles
 drop policy if exists "admin read all" on public.profiles;

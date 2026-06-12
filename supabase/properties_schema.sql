@@ -71,7 +71,8 @@ CREATE POLICY "auth insert own profile" ON public.profiles FOR insert
 drop policy if exists "auth update own profile" on public.profiles;
 DROP POLICY IF EXISTS "auth update own profile" ON public.profiles;
 CREATE POLICY "auth update own profile" ON public.profiles FOR update
-  using (auth.uid() = id);
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
 
 drop policy if exists "admin all profiles" on public.profiles;
 DROP POLICY IF EXISTS "admin all profiles" ON public.profiles;

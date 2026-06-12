@@ -231,7 +231,7 @@ export default function ListingDetail({
     { label: 'ქალაქი', value: listing.city },
     { label: 'უბანი', value: listing.district },
     { label: 'ტიპი', value: listing.type === 'sale' ? 'იყიდება' : listing.type === 'rent' ? 'ქირავდება' : listing.type },
-    ].map((spec) => (
+    ].filter(spec => listing.property_type !== 'land' || spec.label === 'ფართი' || spec.label === 'ქალაქი' || spec.label === 'უბანი' || spec.label === 'ტიპი').map((spec) => (
     <div key={spec.label} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
      <div className="text-xs text-gray-400 mb-1">{spec.label}</div>
      <div className="text-sm font-semibold text-gray-900">{spec.value}</div>
@@ -312,6 +312,15 @@ export default function ListingDetail({
     <span className="bg-violet-100 text-ss-primary text-xs font-semibold px-2.5 py-1 rounded-xl">
     {listing.type === 'sale' ? 'იყიდება' : listing.type === 'rent' ? 'ქირავდება' : listing.type === 'mortgage' ? 'იპოთეკა' : 'გირაო'}
     </span>
+    {listing.vipStatus !== 'standard' && (
+     <span className={`text-xs font-bold px-2.5 py-1 rounded-xl ${
+      listing.vipStatus === 'premium' ? 'bg-amber-600 text-white' :
+      listing.vipStatus === 'super' ? 'bg-emerald-600 text-white' :
+      'bg-slate-500 text-white'
+     }`}>
+      {listing.vipStatus === 'premium' ? 'PREMIUM' : listing.vipStatus === 'super' ? 'SUPER' : 'BASIC'}
+     </span>
+    )}
     <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-xl flex items-center gap-1">
     <Sparkles size={10} />
     {listing.priceLevel === 'cheap' || listing.priceLevel === 'low' ? 'კარგი ფასი' : listing.priceLevel === 'average' ? 'საბაზრო ფასი' : 'პრემიუმ ფასი'}

@@ -15,8 +15,7 @@ export function useProfile(userId: string | undefined) {
     setSaving(true);
     const { error } = await supabase
       .from('profiles')
-      .update(fields)
-      .eq('id', userId);
+      .upsert({ id: userId, ...fields }, { onConflict: 'id' });
     setSaving(false);
     return { error: error?.message ?? null };
   }, [userId]);
@@ -40,9 +39,12 @@ export function useProfile(userId: string | undefined) {
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     const url = data.publicUrl + `?t=${Date.now()}`;
 
-    await supabase.from('profiles').update({ avatar_url: url }).eq('id', userId);
+    const { error: dbError } = await supabase
+      .from('profiles')
+      .upsert({ id: userId, avatar_url: url }, { onConflict: 'id' });
 
     setUploadingAvatar(false);
+    if (dbError) return { url: null, error: dbError.message };
     return { url, error: null };
   }, [userId]);
 
