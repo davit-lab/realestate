@@ -41,878 +41,878 @@ import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 export default function App() {
-  const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
-  const { dbListings } = useSupabaseListings();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+ const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
+ const { dbListings } = useSupabaseListings();
+ const navigate = useNavigate();
+ const location = useLocation();
+ const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Navigation states
-  const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
-  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
+ // Navigation states
+ const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
+ const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
-  // URL → activeTab sync on mount and route change
-  useEffect(() => {
-    const path = location.pathname;
-    const pathToTab: Record<string, ActiveTab> = {
-      '/': 'explore',
-      '/explore': 'explore',
-      '/favorites': 'favorites',
-      '/messages': 'messages',
-      '/profile': 'profile',
-      '/admin': 'admin',
-      '/add-property': 'add_property',
-      '/hotels': 'hotels',
-      '/tourism': 'tourism',
-      '/terms': 'terms',
-      '/privacy': 'privacy',
-    };
-    const tab = pathToTab[path];
-    if (tab) setActiveTab(tab);
-    // /listing/:id → detail tab
-    if (path.startsWith('/listing/')) {
-      const id = path.split('/listing/')[1];
-      setSelectedListingId(id || null);
-      setActiveTab('detail');
-    }
-  }, [location.pathname]);
+ // URL → activeTab sync on mount and route change
+ useEffect(() => {
+ const path = location.pathname;
+ const pathToTab: Record<string, ActiveTab> = {
+  '/': 'explore',
+  '/explore': 'explore',
+  '/favorites': 'favorites',
+  '/messages': 'messages',
+  '/profile': 'profile',
+  '/admin': 'admin',
+  '/add-property': 'add_property',
+  '/hotels': 'hotels',
+  '/tourism': 'tourism',
+  '/terms': 'terms',
+  '/privacy': 'privacy',
+ };
+ const tab = pathToTab[path];
+ if (tab) setActiveTab(tab);
+ // /listing/:id → detail tab
+ if (path.startsWith('/listing/')) {
+  const id = path.split('/listing/')[1];
+  setSelectedListingId(id || null);
+  setActiveTab('detail');
+ }
+ }, [location.pathname]);
 
-  // activeTab → URL sync
-  const setActiveTabWithUrl = useCallback((tab: ActiveTab) => {
-    setActiveTab(tab);
-    const tabToPath: Record<string, string> = {
-      explore: '/',
-      favorites: '/favorites',
-      messages: '/messages',
-      profile: '/profile',
-      admin: '/admin',
-      add_property: '/add-property',
-      hotels: '/hotels',
-      tourism: '/tourism',
-      terms: '/terms',
-      privacy: '/privacy',
-    };
-    const path = tabToPath[tab];
-    if (path && location.pathname !== path) {
-      navigate(path, { replace: false });
-    }
-  }, [navigate, location.pathname]);
+ // activeTab → URL sync
+ const setActiveTabWithUrl = useCallback((tab: ActiveTab) => {
+ setActiveTab(tab);
+ const tabToPath: Record<string, string> = {
+  explore: '/',
+  favorites: '/favorites',
+  messages: '/messages',
+  profile: '/profile',
+  admin: '/admin',
+  add_property: '/add-property',
+  hotels: '/hotels',
+  tourism: '/tourism',
+  terms: '/terms',
+  privacy: '/privacy',
+ };
+ const path = tabToPath[tab];
+ if (path && location.pathname !== path) {
+  navigate(path, { replace: false });
+ }
+ }, [navigate, location.pathname]);
 
-  // Listing click → /listing/:id
-  const handleListingClick = useCallback((id: string) => {
-    setSelectedListingId(id);
-    setActiveTab('detail');
-    navigate(`/listing/${id}`);
-  }, [navigate]);
+ // Listing click → /listing/:id
+ const handleListingClick = useCallback((id: string) => {
+ setSelectedListingId(id);
+ setActiveTab('detail');
+ navigate(`/listing/${id}`);
+ }, [navigate]);
 
-  // Core collections — load from localStorage or start empty
-  const [localListings, setLocalListings] = useState<Listing[]>(() => {
-    try { const raw = localStorage.getItem('adjarahome_listings'); return raw ? JSON.parse(raw) : []; }
-    catch { return []; }
+ // Core collections — load from localStorage or start empty
+ const [localListings, setLocalListings] = useState<Listing[]>(() => {
+ try { const raw = localStorage.getItem('adjarahome_listings'); return raw ? JSON.parse(raw) : []; }
+ catch { return []; }
+ });
+
+ // Merge: DB listings first, then local-only ones not already in DB
+ const listings = [
+ ...dbListings,
+ ...localListings.filter(l => !dbListings.find(d => d.id === l.id)),
+ ];
+ const setListings = (fn: any) => setLocalListings(fn);
+ const [paymentCards, setPaymentCards] = useState<PaymentCard[]>(() => {
+ try { const raw = localStorage.getItem('adjarahome_cards'); return raw ? JSON.parse(raw) : []; }
+ catch { return []; }
+ });
+ const [userProfile, setUserProfile] = useState(() => {
+ try { const raw = localStorage.getItem('adjarahome_profile');
+  return raw ? JSON.parse(raw) : {
+  name: '', userId: '', avatar: '', balance: 0, rating: 0,
+  reviewCount: 0, joinedDate: '', phone: '', smsEnabled: false
+  };
+ }
+ catch { return { name: '', userId: '', avatar: '', balance: 0, rating: 0, reviewCount: 0, joinedDate: '', phone: '', smsEnabled: false }; }
+ });
+ const [chats, setChats] = useState<any[]>(() => {
+ try { const raw = localStorage.getItem('adjarahome_chats'); return raw ? JSON.parse(raw) : []; }
+ catch { return []; }
+ });
+ const { favorites, toggleFavorite } = useFavorites(user?.id);
+ const [activeChatId, setActiveChatId] = useState<string | null>(null);
+ const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+ const [selectedTourismItem, setSelectedTourismItem] = useState<TourismItem | null>(null);
+
+
+ // Search and Filter parameters
+ const [selectedType, setSelectedType] = useState<ListingType | 'all'>('all');
+ const [searchArea, setSearchArea] = useState('');
+ const [mainSearchBarQuery, setMainSearchBarQuery] = useState('');
+ const [selectedCity, setSelectedCity] = useState('all');
+ const [selectedDistrict, setSelectedDistrict] = useState('all');
+ const [roomFilter, setRoomFilter] = useState('any');
+ const [priceMin, setPriceMin] = useState('');
+ const [priceMax, setPriceMax] = useState('');
+ const [selectedStatus, setSelectedStatus] = useState('all');
+
+ // Multi-selector Dropdowns states
+ const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+
+ // View mode: grid vs map
+ const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+
+ // Sort order
+ const [sortOrder, setSortOrder] = useState<'vip' | 'newest' | 'price_asc' | 'price_desc'>('vip');
+
+ // Currency & Language settings
+ const [currency, setCurrency] = useState<'GEL' | 'USD'>('GEL');
+ const [language, setLanguage] = useState<'ka' | 'en' | 'ru'>('ka');
+
+ // Modal toggle
+ const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+ // Compare listings
+ const [compareListings, setCompareListings] = useState<string[]>([]);
+ const [showCompareDrawer, setShowCompareDrawer] = useState(false);
+
+ // Search history & recent views
+ const { history: searchHistory, addSearch, removeSearch: removeHistoryItem, clearHistory: clearSearchHistory } = useSearchHistory();
+ const { recentViews, removeRecentView, clearRecentViews } = useRecentViews();
+
+ // Keyboard shortcuts
+ const mainSearchRef = useRef<HTMLInputElement>(null);
+ useKeyboardShortcut('/', () => {
+ mainSearchRef.current?.focus();
+ }, { preventDefault: true });
+
+ // Sync window page title with current tab/listing
+ useEffect(() => {
+ if (activeTab === 'profile') {
+  document.title = 'ჩემი პროფილი • Adjarahome.ge';
+ } else if (activeTab === 'favorites') {
+  document.title = 'რჩეულები განცხადებები • Adjarahome.ge';
+ } else if (activeTab === 'messages') {
+  document.title = 'ჩემი მიმოწერები • Adjarahome.ge';
+ } else if (activeTab === 'add_property') {
+  document.title = 'განცხადების დამატება • Adjarahome.ge';
+ } else if (activeTab === 'admin') {
+  document.title = 'ადმინ პანელი • Adjarahome.ge';
+ } else if (activeTab === 'detail' && selectedListingId) {
+  const listing = listings.find((p) => p.id === selectedListingId);
+  if (listing) document.title = `${listing.title} • Adjarahome.ge`;
+ } else {
+  document.title = 'უძრავი ქონება საქართველოში • Adjarahome.ge';
+ }
+ }, [activeTab, selectedListingId, listings]);
+
+ // Persist user data to localStorage
+ useEffect(() => { localStorage.setItem('adjarahome_listings', JSON.stringify(listings)); }, [listings]);
+ useEffect(() => { localStorage.setItem('adjarahome_cards', JSON.stringify(paymentCards)); }, [paymentCards]);
+ useEffect(() => { localStorage.setItem('adjarahome_profile', JSON.stringify(userProfile)); }, [userProfile]);
+ useEffect(() => { localStorage.setItem('adjarahome_chats', JSON.stringify(chats)); }, [chats]);
+
+ // Derived Cities & Districts lists based on uploaded listings
+ const citiesList = useMemo(() => {
+ const list = new Set(listings.map((l) => l.city));
+ return Array.from(list);
+ }, [listings]);
+
+ const districtsList = useMemo(() => {
+ if (selectedCity === 'all') return [];
+ const filtered = listings.filter((l) => l.city === selectedCity);
+ const list = new Set(filtered.map((l) => l.district));
+ return Array.from(list);
+ }, [selectedCity, listings]);
+
+ // Handle favorite clicking
+ const handleFavoriteToggle = (id: string, e: React.MouseEvent) => {
+ e.stopPropagation(); // halt bubbling trigger click cards
+ void toggleFavorite(id);
+ };
+
+ // Handle bookings from Hotels/Tourism pages
+ const handleBooking = (data: { type: 'hotel' | 'tourism'; itemId: string; itemName: string; itemImage: string; details: string; email: string; phone: string; guestName: string }) => {
+ const now = new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' });
+ const bookingEmoji = data.type === 'hotel' ? '🏨' : '🎟';
+ const newChat = {
+  id: `booking-${Date.now()}`,
+  listingTitle: data.itemName,
+  listingId: data.itemId,
+  agentName: `${bookingEmoji} ჯავშნის დადასტურება`,
+  agentAvatar: data.itemImage,
+  lastMessage: `${data.guestName} · ${data.email}`,
+  time: 'ახლახან',
+  type: 'booking' as const,
+  messages: [
+  {
+   sender: 'agent' as const,
+   text: `✅ ჯავშანი დადასტურდა!\n\n${data.details}\n\n📧 დასტური გაიგზავნება: ${data.email}`,
+   time: now,
+  },
+  ],
+ };
+ setChats(prev => [newChat, ...prev]);
+ setActiveChatId(newChat.id);
+ // Open mail client with booking confirmation
+ const subject = encodeURIComponent(`ჯავშნის დადასტურება — ${data.itemName}`);
+ const body = encodeURIComponent(data.details + '\n\nAdjarahome.ge');
+ window.open(`mailto:${data.email}?subject=${subject}&body=${body}`);
+ // Navigate to messages to show notification
+ setTimeout(() => setActiveTab('messages'), 1200);
+ };
+
+ // Add new uploaded properties to arrays + Supabase
+ const handleAddListing = async (newListing: Listing) => {
+ setListings([newListing, ...listings]);
+ setUserProfile((prev) => ({
+  ...prev,
+  balance: Math.max(0, prev.balance - (newListing.vipStatus === 'super_vip' ? 25 : newListing.vipStatus === 'vip+' ? 10 : 0)),
+ }));
+ // Also insert into Supabase
+ if (isSupabaseConfigured) {
+  const { error } = await supabase.from('properties').insert({
+  title: newListing.title,
+  deal_type: newListing.type,
+  property_type: newListing.condition || 'apartment',
+  location: newListing.location,
+  city: newListing.city,
+  district: newListing.district,
+  rooms: parseInt(newListing.rooms) || null,
+  area_sqm: newListing.area,
+  price: newListing.priceLari,
+  currency: 'GEL',
+  description: newListing.descriptions.ka,
+  phone: newListing.author.phone,
+  images: newListing.images,
+  status: newListing.status,
+  vip_status: newListing.vipStatus,
+  author_name: newListing.author.name,
+  author_avatar: newListing.author.avatar,
+  lat: newListing.lat ?? null,
+  lng: newListing.lng ?? null,
+  user_id: user?.id ?? null,
   });
+  if (!error) {
+  // Trigger refresh of dbListings
+  window.dispatchEvent(new CustomEvent('adjarahome:refresh-listings'));
+  }
+ }
+ };
 
-  // Merge: DB listings first, then local-only ones not already in DB
-  const listings = [
-    ...dbListings,
-    ...localListings.filter(l => !dbListings.find(d => d.id === l.id)),
-  ];
-  const setListings = (fn: any) => setLocalListings(fn);
-  const [paymentCards, setPaymentCards] = useState<PaymentCard[]>(() => {
-    try { const raw = localStorage.getItem('adjarahome_cards'); return raw ? JSON.parse(raw) : []; }
-    catch { return []; }
+ // Switch filter elements on clicking specific agents listings
+ const handleAgentListingsFilter = (agentName: string) => {
+ // Locate properties with this agent, set type and filter properly
+ setSelectedType('all');
+ setSelectedCity('all');
+ setSelectedDistrict('all');
+ setRoomFilter('any');
+ setSearchArea(agentName);
+ setMainSearchBarQuery('');
+ setActiveTab('explore');
+ };
+
+ // Compare listings helpers
+ const toggleCompare = useCallback((id: string, e?: React.MouseEvent) => {
+ e?.stopPropagation();
+ setCompareListings(prev => {
+  const exists = prev.includes(id);
+  if (exists) return prev.filter(cid => cid !== id);
+  if (prev.length >= 4) return prev; // max 4
+  return [...prev, id];
+ });
+ }, []);
+
+ const compareListingsData = useMemo(() => {
+ return listings.filter(l => compareListings.includes(l.id));
+ }, [listings, compareListings]);
+
+ // Track search history when filters change meaningfully
+ const lastTrackedSearch = useRef('');
+ useEffect(() => {
+ const key = JSON.stringify({ type: selectedType, city: selectedCity, district: selectedDistrict, rooms: roomFilter, min: priceMin, max: priceMax, status: selectedStatus, q: mainSearchBarQuery });
+ if (key === lastTrackedSearch.current) return;
+ lastTrackedSearch.current = key;
+ const timer = setTimeout(() => {
+  addSearch(mainSearchBarQuery, { type: selectedType, city: selectedCity, district: selectedDistrict, rooms: roomFilter, min: priceMin, max: priceMax, status: selectedStatus });
+ }, 3000);
+ return () => clearTimeout(timer);
+ }, [selectedType, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, selectedStatus, mainSearchBarQuery, addSearch]);
+
+ // Push new comments/messages generated directly inside housing detail comments list
+ const handleDetailSendMessage = (listingId: string, messageText: string) => {
+ // Find the listings title and author
+ const listing = listings.find((l) => l.id === listingId);
+ if (!listing) return;
+
+ // Check if chat conversation already exists
+ const existingChat = chats.find((c) => c.listingId === listingId);
+
+ if (existingChat) {
+  const updatedChats = chats.map((c) => {
+  if (c.id === existingChat.id) {
+   return {
+   ...c,
+   lastMessage: messageText,
+   time: 'ახლახან',
+   messages: [
+    ...c.messages,
+    { sender: 'user', text: messageText, time: 'ახლახან' as string },
+   ],
+   };
+  }
+  return c;
   });
-  const [userProfile, setUserProfile] = useState(() => {
-    try { const raw = localStorage.getItem('adjarahome_profile');
-      return raw ? JSON.parse(raw) : {
-        name: '', userId: '', avatar: '', balance: 0, rating: 0,
-        reviewCount: 0, joinedDate: '', phone: '', smsEnabled: false
-      };
-    }
-    catch { return { name: '', userId: '', avatar: '', balance: 0, rating: 0, reviewCount: 0, joinedDate: '', phone: '', smsEnabled: false }; }
-  });
-  const [chats, setChats] = useState<any[]>(() => {
-    try { const raw = localStorage.getItem('adjarahome_chats'); return raw ? JSON.parse(raw) : []; }
-    catch { return []; }
-  });
-  const { favorites, toggleFavorite } = useFavorites(user?.id);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
-  const [selectedTourismItem, setSelectedTourismItem] = useState<TourismItem | null>(null);
-
-
-  // Search and Filter parameters
-  const [selectedType, setSelectedType] = useState<ListingType | 'all'>('all');
-  const [searchArea, setSearchArea] = useState('');
-  const [mainSearchBarQuery, setMainSearchBarQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('all');
-  const [selectedDistrict, setSelectedDistrict] = useState('all');
-  const [roomFilter, setRoomFilter] = useState('any');
-  const [priceMin, setPriceMin] = useState('');
-  const [priceMax, setPriceMax] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-
-  // Multi-selector Dropdowns states
-  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
-
-  // View mode: grid vs map
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-
-  // Sort order
-  const [sortOrder, setSortOrder] = useState<'vip' | 'newest' | 'price_asc' | 'price_desc'>('vip');
-
-  // Currency & Language settings
-  const [currency, setCurrency] = useState<'GEL' | 'USD'>('GEL');
-  const [language, setLanguage] = useState<'ka' | 'en' | 'ru'>('ka');
-
-  // Modal toggle
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Compare listings
-  const [compareListings, setCompareListings] = useState<string[]>([]);
-  const [showCompareDrawer, setShowCompareDrawer] = useState(false);
-
-  // Search history & recent views
-  const { history: searchHistory, addSearch, removeSearch: removeHistoryItem, clearHistory: clearSearchHistory } = useSearchHistory();
-  const { recentViews, removeRecentView, clearRecentViews } = useRecentViews();
-
-  // Keyboard shortcuts
-  const mainSearchRef = useRef<HTMLInputElement>(null);
-  useKeyboardShortcut('/', () => {
-    mainSearchRef.current?.focus();
-  }, { preventDefault: true });
-
-  // Sync window page title with current tab/listing
-  useEffect(() => {
-    if (activeTab === 'profile') {
-      document.title = 'ჩემი პროფილი • Adjarahome.ge';
-    } else if (activeTab === 'favorites') {
-      document.title = 'რჩეულები განცხადებები • Adjarahome.ge';
-    } else if (activeTab === 'messages') {
-      document.title = 'ჩემი მიმოწერები • Adjarahome.ge';
-    } else if (activeTab === 'add_property') {
-      document.title = 'განცხადების დამატება • Adjarahome.ge';
-    } else if (activeTab === 'admin') {
-      document.title = 'ადმინ პანელი • Adjarahome.ge';
-    } else if (activeTab === 'detail' && selectedListingId) {
-      const listing = listings.find((p) => p.id === selectedListingId);
-      if (listing) document.title = `${listing.title} • Adjarahome.ge`;
-    } else {
-      document.title = 'უძრავი ქონება საქართველოში • Adjarahome.ge';
-    }
-  }, [activeTab, selectedListingId, listings]);
-
-  // Persist user data to localStorage
-  useEffect(() => { localStorage.setItem('adjarahome_listings', JSON.stringify(listings)); }, [listings]);
-  useEffect(() => { localStorage.setItem('adjarahome_cards', JSON.stringify(paymentCards)); }, [paymentCards]);
-  useEffect(() => { localStorage.setItem('adjarahome_profile', JSON.stringify(userProfile)); }, [userProfile]);
-  useEffect(() => { localStorage.setItem('adjarahome_chats', JSON.stringify(chats)); }, [chats]);
-
-  // Derived Cities & Districts lists based on uploaded listings
-  const citiesList = useMemo(() => {
-    const list = new Set(listings.map((l) => l.city));
-    return Array.from(list);
-  }, [listings]);
-
-  const districtsList = useMemo(() => {
-    if (selectedCity === 'all') return [];
-    const filtered = listings.filter((l) => l.city === selectedCity);
-    const list = new Set(filtered.map((l) => l.district));
-    return Array.from(list);
-  }, [selectedCity, listings]);
-
-  // Handle favorite clicking
-  const handleFavoriteToggle = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // halt bubbling trigger click cards
-    void toggleFavorite(id);
+  setChats(updatedChats);
+  setActiveChatId(existingChat.id);
+ } else {
+  // Create new chat
+  const newChatId = `chat-new-${Date.now()}`;
+  const newChat = {
+  id: newChatId,
+  listingTitle: listing.title,
+  listingId: listing.id,
+  agentName: listing.author.name,
+  agentAvatar: listing.author.avatar,
+  lastMessage: messageText,
+  time: 'ახლახან',
+  messages: [
+   { sender: 'user' as const, text: messageText, time: 'ახლახან' },
+  ],
   };
+  setChats([newChat, ...chats]);
+  setActiveChatId(newChatId);
+ }
+ };
 
-  // Handle bookings from Hotels/Tourism pages
-  const handleBooking = (data: { type: 'hotel' | 'tourism'; itemId: string; itemName: string; itemImage: string; details: string; email: string; phone: string; guestName: string }) => {
-    const now = new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' });
-    const bookingEmoji = data.type === 'hotel' ? '🏨' : '🎟';
-    const newChat = {
-      id: `booking-${Date.now()}`,
-      listingTitle: data.itemName,
-      listingId: data.itemId,
-      agentName: `${bookingEmoji} ჯავშნის დადასტურება`,
-      agentAvatar: data.itemImage,
-      lastMessage: `${data.guestName} · ${data.email}`,
-      time: 'ახლახან',
-      type: 'booking' as const,
-      messages: [
-        {
-          sender: 'agent' as const,
-          text: `✅ ჯავშანი დადასტურდა!\n\n${data.details}\n\n📧 დასტური გაიგზავნება: ${data.email}`,
-          time: now,
-        },
-      ],
-    };
-    setChats(prev => [newChat, ...prev]);
-    setActiveChatId(newChat.id);
-    // Open mail client with booking confirmation
-    const subject = encodeURIComponent(`ჯავშნის დადასტურება — ${data.itemName}`);
-    const body = encodeURIComponent(data.details + '\n\nAdjarahome.ge');
-    window.open(`mailto:${data.email}?subject=${subject}&body=${body}`);
-    // Navigate to messages to show notification
-    setTimeout(() => setActiveTab('messages'), 1200);
+ // Curate filtered announcements for the Explore Grid
+ const filteredListings = useMemo(() => {
+ return listings.filter((l) => {
+  // 1. Filter by mortgage/rent/sale/pledge category
+  if (selectedType !== 'all' && l.type !== selectedType) return false;
+
+  // 2. Filter by search query (combines districts, cities, locations and authors)
+  if (searchArea.trim() !== '') {
+  const query = searchArea.toLowerCase();
+  const matchesLocation = l.location.toLowerCase().includes(query);
+  const matchesDistrict = l.district.toLowerCase().includes(query);
+  const matchesAuthor = l.author.name.toLowerCase().includes(query);
+  const matchesCity = l.city.toLowerCase().includes(query);
+  if (!matchesLocation && !matchesDistrict && !matchesAuthor && !matchesCity) return false;
+  }
+
+  // 3. Main top search bar typing query
+  if (mainSearchBarQuery.trim() !== '') {
+  const query = mainSearchBarQuery.toLowerCase();
+  const matchesTitle = l.title.toLowerCase().includes(query);
+  const matchesLocation = l.location.toLowerCase().includes(query);
+  if (!matchesTitle && !matchesLocation) return false;
+  }
+
+  // 3b. Status filter (building status)
+  if (selectedStatus !== 'all' && l.status !== selectedStatus) return false;
+
+  // 4. City selector
+  if (selectedCity !== 'all' && l.city !== selectedCity) return false;
+
+  // 5. District selector
+  if (selectedDistrict !== 'all' && l.district !== selectedDistrict) return false;
+
+  // 6. Rooms size selector
+  if (roomFilter !== 'any') {
+  if (roomFilter === '6+') {
+   if (Number(l.rooms) < 6) return false;
+  } else {
+   if (l.rooms !== roomFilter) return false;
+  }
+  }
+
+  // 7. Price range
+  const price = currency === 'GEL' ? l.priceLari : l.priceUsd;
+  if (priceMin !== '' && price < Number(priceMin)) return false;
+  if (priceMax !== '' && price > Number(priceMax)) return false;
+
+  return true;
+ }).sort((a, b) => {
+  if (sortOrder === 'price_asc') {
+  const pa = currency === 'GEL' ? a.priceLari : a.priceUsd;
+  const pb = currency === 'GEL' ? b.priceLari : b.priceUsd;
+  return pa - pb;
+  }
+  if (sortOrder === 'price_desc') {
+  const pa = currency === 'GEL' ? a.priceLari : a.priceUsd;
+  const pb = currency === 'GEL' ? b.priceLari : b.priceUsd;
+  return pb - pa;
+  }
+  if (sortOrder === 'newest') {
+  return b.id.localeCompare(a.id);
+  }
+  const boostRank = (vip: string | undefined) => {
+  if (vip === 'super_vip') return 3;
+  if (vip === 'vip+') return 2;
+  if (vip === 'vip') return 1;
+  return 0;
   };
+  return boostRank(b.vipStatus) - boostRank(a.vipStatus);
+ });
+ }, [listings, selectedType, searchArea, mainSearchBarQuery, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, currency, sortOrder, selectedStatus]);
 
-  // Add new uploaded properties to arrays + Supabase
-  const handleAddListing = async (newListing: Listing) => {
-    setListings([newListing, ...listings]);
-    setUserProfile((prev) => ({
-      ...prev,
-      balance: Math.max(0, prev.balance - (newListing.vipStatus === 'super_vip' ? 25 : newListing.vipStatus === 'vip+' ? 10 : 0)),
-    }));
-    // Also insert into Supabase
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('properties').insert({
-        title: newListing.title,
-        deal_type: newListing.type,
-        property_type: newListing.condition || 'apartment',
-        location: newListing.location,
-        city: newListing.city,
-        district: newListing.district,
-        rooms: parseInt(newListing.rooms) || null,
-        area_sqm: newListing.area,
-        price: newListing.priceLari,
-        currency: 'GEL',
-        description: newListing.descriptions.ka,
-        phone: newListing.author.phone,
-        images: newListing.images,
-        status: newListing.status,
-        vip_status: newListing.vipStatus,
-        author_name: newListing.author.name,
-        author_avatar: newListing.author.avatar,
-        lat: newListing.lat ?? null,
-        lng: newListing.lng ?? null,
-        user_id: user?.id ?? null,
-      });
-      if (!error) {
-        // Trigger refresh of dbListings
-        window.dispatchEvent(new CustomEvent('adjarahome:refresh-listings'));
-      }
-    }
-  };
+ // User uploaded listings subset helper
+ const userListings = useMemo(() => {
+ if (!user) return [];
+ return listings.filter((l) => {
+  if (l.user_id) return l.user_id === user.id;
+  return l.author?.name === userProfile.name;
+ });
+ }, [listings, user, userProfile.name]);
 
-  // Switch filter elements on clicking specific agents listings
-  const handleAgentListingsFilter = (agentName: string) => {
-    // Locate properties with this agent, set type and filter properly
-    setSelectedType('all');
-    setSelectedCity('all');
-    setSelectedDistrict('all');
-    setRoomFilter('any');
-    setSearchArea(agentName);
-    setMainSearchBarQuery('');
-    setActiveTab('explore');
-  };
+ // Favourited listings subset helper
+ const favoritedListingsSubset = useMemo(() => {
+ return listings.filter((l) => favorites.includes(l.id));
+ }, [listings, favorites]);
 
-  // Compare listings helpers
-  const toggleCompare = useCallback((id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setCompareListings(prev => {
-      const exists = prev.includes(id);
-      if (exists) return prev.filter(cid => cid !== id);
-      if (prev.length >= 4) return prev; // max 4
-      return [...prev, id];
-    });
-  }, []);
+ return (
+ <div className="min-h-screen bg-[#F4F4F5] #0F0F12] flex flex-col justify-between" id="adjarahome-app">
+  {/* Header bar component */}
+  <Header
+  activeTab={activeTab}
+  setActiveTab={(tab) => {
+   setActiveTabWithUrl(tab);
+   window.scrollTo({ top: 0, behavior: 'smooth' });
+  }}
+  favoritesCount={favorites.length}
+  unreadMessagesCount={0}
+  onAddListingClick={() => isAuthenticated ? setActiveTabWithUrl('add_property') : setShowAuthModal(true)}
+  userAvatar={profile?.avatar_url || userProfile.avatar}
+  isAuthenticated={isAuthenticated}
+  isAdmin={isAdmin}
+  onAuthClick={() => setShowAuthModal(true)}
+  onLogout={signOut}
+  />
 
-  const compareListingsData = useMemo(() => {
-    return listings.filter(l => compareListings.includes(l.id));
-  }, [listings, compareListings]);
+  {/* Main Core View Area content render */}
+  <AnimatePresence mode="wait">
+  <motion.main
+   key={activeTab}
+   initial={{ opacity: 0, y: 8 }}
+   animate={{ opacity: 1, y: 0 }}
+   exit={{ opacity: 0, y: -8 }}
+   transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+   className="flex-1 pb-16"
+  >
+  {activeTab === 'explore' && (
+   <div className="w-full flex flex-col">
 
-  // Track search history when filters change meaningfully
-  const lastTrackedSearch = useRef('');
-  useEffect(() => {
-    const key = JSON.stringify({ type: selectedType, city: selectedCity, district: selectedDistrict, rooms: roomFilter, min: priceMin, max: priceMax, status: selectedStatus, q: mainSearchBarQuery });
-    if (key === lastTrackedSearch.current) return;
-    lastTrackedSearch.current = key;
-    const timer = setTimeout(() => {
-      addSearch(mainSearchBarQuery, { type: selectedType, city: selectedCity, district: selectedDistrict, rooms: roomFilter, min: priceMin, max: priceMax, status: selectedStatus });
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [selectedType, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, selectedStatus, mainSearchBarQuery, addSearch]);
+   {/* ── Hero ── */}
+   <div className="relative overflow-hidden">
+    <div
+    className="absolute inset-0 bg-cover bg-center"
+    style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80)' }}
+    />
+    <div className="max-w-3xl mx-auto px-4 py-10 text-center relative z-10">
+    <div className="bg-white/95 backdrop-blur-sm rounded-3xl border border-gray-200 shadow-2xl p-6 md:p-8">
+     <h1 className="text-[34px] md:text-[42px] font-black text-gray-900 tracking-tight mb-3 leading-[1.1]">
+     იპოვე შენი<br className="md:hidden" />
+     <span className="text-ss-primary">ზუსტი სახლი</span>
+     </h1>
+     <p className="text-gray-500 text-[15px] mb-6 max-w-md mx-auto leading-relaxed">
+     ბათუმი, თბილისი, ქობულეთი და სხვა ქალაქები — ყველა ვარიანტი ერთ სივრცეში
+     </p>
 
-  // Push new comments/messages generated directly inside housing detail comments list
-  const handleDetailSendMessage = (listingId: string, messageText: string) => {
-    // Find the listings title and author
-    const listing = listings.find((l) => l.id === listingId);
-    if (!listing) return;
+     <div className="mb-4">
+     <SmartSearchAI
+      cities={citiesList}
+      districts={districtsList}
+      onSearch={(parsed: ParsedQuery) => {
+      if (parsed.type) setSelectedType(parsed.type);
+      if (parsed.city) setSelectedCity(parsed.city);
+      if (parsed.district) setSelectedDistrict(parsed.district);
+      if (parsed.rooms !== undefined) setRoomFilter(String(parsed.rooms));
+      if (parsed.maxPrice !== undefined) setPriceMax(String(parsed.maxPrice));
+      if (parsed.minPrice !== undefined) setPriceMin(String(parsed.minPrice));
+      }}
+     />
+     </div>
 
-    // Check if chat conversation already exists
-    const existingChat = chats.find((c) => c.listingId === listingId);
+     <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
+     <div className="flex gap-1 p-2 bg-white border-b border-gray-100 ">
+      {(['all','sale','rent','pledge','mortgage'] as const).map((v) => {
+      const labels: Record<string,string> = { all:'ყველა', sale:'იყიდება', rent:'ქირავდება', pledge:'გირაო', mortgage:'იპოთეკა' };
+      return (
+       <button key={v} onClick={() => setSelectedType(v)}
+       className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all cursor-pointer ${
+        selectedType === v
+        ? 'bg-gray-900 text-white '
+        : 'text-gray-500 hover:text-gray-700 :text-gray-200 hover:bg-gray-50 :bg-gray-800'
+       }`}
+       >{labels[v]}</button>
+      );
+      })}
+     </div>
 
-    if (existingChat) {
-      const updatedChats = chats.map((c) => {
-        if (c.id === existingChat.id) {
-          return {
-            ...c,
-            lastMessage: messageText,
-            time: 'ახლახან',
-            messages: [
-              ...c.messages,
-              { sender: 'user', text: messageText, time: 'ახლახან' as string },
-            ],
-          };
-        }
-        return c;
-      });
-      setChats(updatedChats);
-      setActiveChatId(existingChat.id);
-    } else {
-      // Create new chat
-      const newChatId = `chat-new-${Date.now()}`;
-      const newChat = {
-        id: newChatId,
-        listingTitle: listing.title,
-        listingId: listing.id,
-        agentName: listing.author.name,
-        agentAvatar: listing.author.avatar,
-        lastMessage: messageText,
-        time: 'ახლახან',
-        messages: [
-          { sender: 'user' as const, text: messageText, time: 'ახლახან' },
-        ],
-      };
-      setChats([newChat, ...chats]);
-      setActiveChatId(newChatId);
-    }
-  };
-
-  // Curate filtered announcements for the Explore Grid
-  const filteredListings = useMemo(() => {
-    return listings.filter((l) => {
-      // 1. Filter by mortgage/rent/sale/pledge category
-      if (selectedType !== 'all' && l.type !== selectedType) return false;
-
-      // 2. Filter by search query (combines districts, cities, locations and authors)
-      if (searchArea.trim() !== '') {
-        const query = searchArea.toLowerCase();
-        const matchesLocation = l.location.toLowerCase().includes(query);
-        const matchesDistrict = l.district.toLowerCase().includes(query);
-        const matchesAuthor = l.author.name.toLowerCase().includes(query);
-        const matchesCity = l.city.toLowerCase().includes(query);
-        if (!matchesLocation && !matchesDistrict && !matchesAuthor && !matchesCity) return false;
-      }
-
-      // 3. Main top search bar typing query
-      if (mainSearchBarQuery.trim() !== '') {
-        const query = mainSearchBarQuery.toLowerCase();
-        const matchesTitle = l.title.toLowerCase().includes(query);
-        const matchesLocation = l.location.toLowerCase().includes(query);
-        if (!matchesTitle && !matchesLocation) return false;
-      }
-
-      // 3b. Status filter (building status)
-      if (selectedStatus !== 'all' && l.status !== selectedStatus) return false;
-
-      // 4. City selector
-      if (selectedCity !== 'all' && l.city !== selectedCity) return false;
-
-      // 5. District selector
-      if (selectedDistrict !== 'all' && l.district !== selectedDistrict) return false;
-
-      // 6. Rooms size selector
-      if (roomFilter !== 'any') {
-        if (roomFilter === '6+') {
-          if (Number(l.rooms) < 6) return false;
-        } else {
-          if (l.rooms !== roomFilter) return false;
-        }
-      }
-
-      // 7. Price range
-      const price = currency === 'GEL' ? l.priceLari : l.priceUsd;
-      if (priceMin !== '' && price < Number(priceMin)) return false;
-      if (priceMax !== '' && price > Number(priceMax)) return false;
-
-      return true;
-    }).sort((a, b) => {
-      if (sortOrder === 'price_asc') {
-        const pa = currency === 'GEL' ? a.priceLari : a.priceUsd;
-        const pb = currency === 'GEL' ? b.priceLari : b.priceUsd;
-        return pa - pb;
-      }
-      if (sortOrder === 'price_desc') {
-        const pa = currency === 'GEL' ? a.priceLari : a.priceUsd;
-        const pb = currency === 'GEL' ? b.priceLari : b.priceUsd;
-        return pb - pa;
-      }
-      if (sortOrder === 'newest') {
-        return b.id.localeCompare(a.id);
-      }
-      const boostRank = (vip: string | undefined) => {
-        if (vip === 'super_vip') return 3;
-        if (vip === 'vip+') return 2;
-        if (vip === 'vip') return 1;
-        return 0;
-      };
-      return boostRank(b.vipStatus) - boostRank(a.vipStatus);
-    });
-  }, [listings, selectedType, searchArea, mainSearchBarQuery, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, currency, sortOrder, selectedStatus]);
-
-  // User uploaded listings subset helper
-  const userListings = useMemo(() => {
-    if (!user) return [];
-    return listings.filter((l) => {
-      if (l.user_id) return l.user_id === user.id;
-      return l.author?.name === userProfile.name;
-    });
-  }, [listings, user, userProfile.name]);
-
-  // Favourited listings subset helper
-  const favoritedListingsSubset = useMemo(() => {
-    return listings.filter((l) => favorites.includes(l.id));
-  }, [listings, favorites]);
-
-  return (
-    <div className="min-h-screen bg-[#F4F4F5] dark:bg-[#0F0F12] flex flex-col justify-between" id="adjarahome-app">
-      {/* Header bar component */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTabWithUrl(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        favoritesCount={favorites.length}
-        unreadMessagesCount={0}
-        onAddListingClick={() => isAuthenticated ? setActiveTabWithUrl('add_property') : setShowAuthModal(true)}
-        userAvatar={profile?.avatar_url || userProfile.avatar}
-        isAuthenticated={isAuthenticated}
-        isAdmin={isAdmin}
-        onAuthClick={() => setShowAuthModal(true)}
-        onLogout={signOut}
+     <div className="flex items-stretch bg-white ">
+      <div className="flex-1 flex items-center gap-3 px-5 py-4">
+      <Search size={15} className="text-gray-400 shrink-0" />
+      <input
+       ref={mainSearchRef}
+       type="text" value={mainSearchBarQuery}
+       onChange={(e) => setMainSearchBarQuery(e.target.value)}
+       placeholder="ქუჩა, უბანი, ქალაქი... (/)"
+       className="w-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent"
       />
-
-      {/* Main Core View Area content render */}
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="flex-1 pb-16"
-        >
-        {activeTab === 'explore' && (
-          <div className="w-full flex flex-col">
-
-            {/* ── Hero ── */}
-            <div className="relative overflow-hidden">
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1600&q=80)' }}
-              />
-              <div className="max-w-3xl mx-auto px-4 py-10 text-center relative z-10">
-                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-3xl border border-gray-200 dark:border-gray-700 shadow-2xl p-6 md:p-8">
-                  <h1 className="text-[34px] md:text-[42px] font-black text-gray-900 dark:text-white tracking-tight mb-3 leading-[1.1]">
-                    იპოვე შენი<br className="md:hidden" />
-                    <span className="text-ss-primary">ზუსტი სახლი</span>
-                  </h1>
-                  <p className="text-gray-500 dark:text-gray-400 text-[15px] mb-6 max-w-md mx-auto leading-relaxed">
-                    ბათუმი, თბილისი, ქობულეთი და სხვა ქალაქები — ყველა ვარიანტი ერთ სივრცეში
-                  </p>
-
-                  <div className="mb-4">
-                    <SmartSearchAI
-                      cities={citiesList}
-                      districts={districtsList}
-                      onSearch={(parsed: ParsedQuery) => {
-                        if (parsed.type) setSelectedType(parsed.type);
-                        if (parsed.city) setSelectedCity(parsed.city);
-                        if (parsed.district) setSelectedDistrict(parsed.district);
-                        if (parsed.rooms !== undefined) setRoomFilter(String(parsed.rooms));
-                        if (parsed.maxPrice !== undefined) setPriceMax(String(parsed.maxPrice));
-                        if (parsed.minPrice !== undefined) setPriceMin(String(parsed.minPrice));
-                      }}
-                    />
-                  </div>
-
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="flex gap-1 p-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-                      {(['all','sale','rent','pledge','mortgage'] as const).map((v) => {
-                        const labels: Record<string,string> = { all:'ყველა', sale:'იყიდება', rent:'ქირავდება', pledge:'გირაო', mortgage:'იპოთეკა' };
-                        return (
-                          <button key={v} onClick={() => setSelectedType(v)}
-                            className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all cursor-pointer ${
-                              selectedType === v
-                                ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                          >{labels[v]}</button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex items-stretch bg-white dark:bg-gray-900">
-                      <div className="flex-1 flex items-center gap-3 px-5 py-4">
-                        <Search size={15} className="text-gray-400 shrink-0" />
-                        <input
-                          ref={mainSearchRef}
-                          type="text" value={mainSearchBarQuery}
-                          onChange={(e) => setMainSearchBarQuery(e.target.value)}
-                          placeholder="ქუჩა, უბანი, ქალაქი... (/)"
-                          className="w-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none bg-transparent"
-                        />
-                        {mainSearchBarQuery && (
-                          <button onClick={() => setMainSearchBarQuery('')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none">×</button>
-                        )}
-                      </div>
-
-                      <div className="w-px bg-gray-200 dark:bg-gray-700 self-stretch my-3" />
-
-                      <div className="relative">
-                        <button onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
-                          className="h-full flex items-center gap-2 px-5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer whitespace-nowrap transition-colors"
-                        >
-                          <MapPin size={14} className="text-gray-400" />
-                          <span>{selectedCity === 'all' ? 'ყველა ქალაქი' : selectedCity}</span>
-                          <ChevronDown size={14} className="text-gray-400" />
-                        </button>
-                        {isCityDropdownOpen && (
-                          <div className="absolute left-0 top-full mt-1 min-w-[160px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 py-1">
-                            {[{ value: 'all', label: 'ყველა ქალაქი' }, ...GEORGIAN_LOCATIONS.popular.map(c => ({ value: c, label: c }))].map((opt) => (
-                              <button key={opt.value}
-                                onClick={() => { setSelectedCity(opt.value); setIsCityDropdownOpen(false); }}
-                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors ${
-                                  selectedCity === opt.value ? 'text-ss-primary font-semibold bg-violet-50 dark:bg-violet-900/20' : 'text-gray-700 dark:text-gray-300'
-                                }`}
-                              >
-                                {opt.label}
-                                {selectedCity === opt.value && <Check size={12} className="text-ss-primary" />}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="w-px bg-gray-200 dark:bg-gray-700 self-stretch my-3" />
-
-                      <button className="flex items-center gap-2 bg-ss-primary hover:bg-ss-primary-dark text-white font-semibold px-7 text-sm transition-colors cursor-pointer m-2 rounded-xl">
-                        <Search size={15} />
-                        <span>ძებნა</span>
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            {/* ── Results ── */}
-            <div id="results-section" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
-              <div className="flex flex-col lg:flex-row gap-6 items-start">
-
-                {/* Sidebar */}
-                <div className="lg:w-64 xl:w-72 shrink-0 w-full">
-                  <SidebarFilter
-                    selectedType={selectedType} setSelectedType={setSelectedType}
-                    searchArea={searchArea} setSearchArea={setSearchArea}
-                    currency={currency} toggleCurrency={() => setCurrency(p => p === 'GEL' ? 'USD' : 'GEL')}
-                    language={language} setLanguage={setLanguage}
-                    selectedCity={selectedCity} setSelectedCity={(city) => { setSelectedCity(city); setSelectedDistrict('all'); }}
-                    selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict}
-                    roomFilter={roomFilter} setRoomFilter={setRoomFilter}
-                    cities={citiesList} districts={districtsList}
-                    priceMin={priceMin} setPriceMin={setPriceMin}
-                    priceMax={priceMax} setPriceMax={setPriceMax}
-                    selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus}
-                    searchHistory={searchHistory}
-                    onSearchHistorySelect={(item) => {
-                      if (item.filters.type) setSelectedType(item.filters.type as any);
-                      if (item.filters.city) setSelectedCity(item.filters.city);
-                      if (item.filters.district) setSelectedDistrict(item.filters.district);
-                      if (item.filters.rooms) setRoomFilter(item.filters.rooms);
-                      if (item.filters.min) setPriceMin(item.filters.min);
-                      if (item.filters.max) setPriceMax(item.filters.max);
-                      if (item.filters.status) setSelectedStatus(item.filters.status);
-                      if (item.query) setMainSearchBarQuery(item.query);
-                    }}
-                    onSearchHistoryRemove={removeHistoryItem}
-                    onSearchHistoryClear={clearSearchHistory}
-                    recentViews={recentViews}
-                    onRecentViewSelect={(id) => handleListingClick(id)}
-                    onRecentViewRemove={removeRecentView}
-                    onRecentViewsClear={clearRecentViews}
-                  />
-                </div>
-
-                {/* Grid / Map */}
-                <div className="flex-1 min-w-0 space-y-4">
-                  {/* Results bar with sort + view toggle + compare */}
-                  {(() => {
-                    const typeGeo: Record<string,string> = { all:'ყველა', sale:'იყიდება', rent:'ქირავდება', mortgage:'იპოთეკა', pledge:'გირაო' };
-                    return (
-                      <div className="flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5 gap-2">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 shrink-0">
-                          <span className="font-bold text-gray-900 dark:text-white">{filteredListings.length}</span>
-                          <span className="text-gray-400 ml-1 hidden sm:inline">{typeGeo[selectedType] ?? selectedType}</span>
-                        </p>
-                        <div className="flex items-center gap-2">
-                          {compareListings.length > 0 && (
-                            <button
-                              onClick={() => setShowCompareDrawer(true)}
-                              className="flex items-center gap-1.5 text-[12px] font-semibold text-ss-primary bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors cursor-pointer"
-                            >
-                              <Scale size={13} />
-                              შედარება ({compareListings.length})
-                            </button>
-                          )}
-                          <select
-                            value={sortOrder}
-                            onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
-                            className="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-ss-primary cursor-pointer"
-                          >
-                            <option value="vip">VIP → სტანდარტი</option>
-                            <option value="newest">ახალი → ძველი</option>
-                            <option value="price_asc">ფასი: დაბლა ↑</option>
-                            <option value="price_desc">ფასი: მაღალა ↓</option>
-                          </select>
-                          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-                            <button
-                              onClick={() => setViewMode('grid')}
-                              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                                viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                              }`}
-                            >
-                              <LayoutGrid size={14} />
-                            </button>
-                            <button
-                              onClick={() => setViewMode('map')}
-                              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                                viewMode === 'map' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                              }`}
-                            >
-                              <Map size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Map view */}
-                  {viewMode === 'map' && (
-                    <div className="h-[600px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
-                      <MapView
-                        listings={filteredListings}
-                        favorites={favorites}
-                        currency={currency}
-                        onListingClick={handleListingClick}
-                        onFavoriteToggle={handleFavoriteToggle}
-                      />
-                    </div>
-                  )}
-
-                  {viewMode === 'grid' && (
-                    filteredListings.length === 0 ? (
-                      <EmptyState
-                        type="search"
-                        actionLabel="ფილტრების გასუფთავება"
-                        onAction={() => { setSelectedType('all'); setSearchArea(''); setMainSearchBarQuery(''); setSelectedCity('all'); setSelectedDistrict('all'); setRoomFilter('any'); setPriceMin(''); setPriceMax(''); setSelectedStatus('all'); }}
-                      />
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {filteredListings.map((listing) => (
-                          <ListingCard
-                            key={listing.id}
-                            listing={listing}
-                            isFavorited={favorites.includes(listing.id)}
-                            onFavoriteToggle={handleFavoriteToggle}
-                            currency={currency}
-                            exchangeRate={exchangeRate}
-                            onCardClick={() => handleListingClick(listing.id)}
-                            isCompareSelected={compareListings.includes(listing.id)}
-                            onCompareToggle={toggleCompare}
-                          />
-                        ))}
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Quick Search bento ── */}
-            <ScrollReveal>
-              <QuickSearch
-                onSelect={(filter) => {
-                  setSelectedType('all');
-                  setRoomFilter('any');
-                  setSelectedStatus('all');
-                  setSearchArea('');
-                  if (filter.type) setSelectedType(filter.type as any);
-                  if (filter.rooms) setRoomFilter(filter.rooms);
-                  if (filter.status) setSelectedStatus(filter.status);
-                  if (filter.searchArea) setSearchArea(filter.searchArea);
-                  window.scrollTo({ top: document.getElementById('results-section')?.offsetTop ?? 400, behavior: 'smooth' });
-                }}
-              />
-            </ScrollReveal>
-
-          </div>
-        )}
-
-        {/* Detailed Viewing Page */}
-        {activeTab === 'detail' && selectedListingId && (
-          (() => {
-            const currentObj = listings.find((p) => p.id === selectedListingId);
-            if (!currentObj) return (
-              <div className="py-20 text-center font-sans text-xs font-bold text-red-500">
-                სამწუხაროდ, განცხადება ვერ მოიძებნა!
-              </div>
-            );
-            return (
-              <ListingDetail
-                listing={currentObj}
-                onBackClick={() => setActiveTabWithUrl('explore')}
-                favorites={favorites}
-                onFavoriteToggle={handleFavoriteToggle}
-                currency={currency}
-                exchangeRate={exchangeRate}
-                onAgentClick={handleAgentListingsFilter}
-                onSendMessage={handleDetailSendMessage}
-              />
-            );
-          })()
-        )}
-
-        {/* Profile Payments Hub View Page */}
-        {activeTab === 'profile' && (
-          <ProfileView
-            userProfile={userProfile}
-            setUserProfile={setUserProfile}
-            paymentCards={paymentCards}
-            setPaymentCards={setPaymentCards}
-            myListings={userListings}
-            onAddListingClick={() => setIsAddModalOpen(true)}
-            currency={currency}
-          />
-        )}
-
-        {/* Messaging Chat dialogue center Page */}
-        {activeTab === 'messages' && (
-          <ChatCenter />
-        )}
-
-        {/* Favorites Listings Grid tab */}
-        {activeTab === 'favorites' && (
-          <div className="max-w-7xl mx-auto px-4 py-8 font-sans" id="favorites-tab-view">
-            <div className="max-w-3xl mx-auto text-center mb-10">
-              <h2 className="text-xl font-bold text-ss-charcoal dark:text-white mb-1">რჩეული განცხადებები</h2>
-              <p className="text-xs text-ss-slate dark:text-gray-400">თქვენს მიერ შენახული და მოწონებული უძრავი ქონებები</p>
-            </div>
-
-            {favoritedListingsSubset.length === 0 ? (
-              <EmptyState
-                type="favorites"
-                actionLabel="განცხადებების ნახვა"
-                onAction={() => setActiveTab('explore')}
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                {favoritedListingsSubset.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    isFavorited={true}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    currency={currency}
-                    exchangeRate={exchangeRate}
-                    onCardClick={() => handleListingClick(listing.id)}
-                    isCompareSelected={compareListings.includes(listing.id)}
-                    onCompareToggle={toggleCompare}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Add Property page with Telegram/WhatsApp auto-fill */}
-        {activeTab === 'add_property' && (
-          <AddProperty onBack={() => setActiveTabWithUrl('explore')} />
-        )}
-
-        {/* Admin Panel — admin only */}
-        {activeTab === 'admin' && isAdmin && (
-          <AdminPanel
-            localListings={listings}
-            onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
-          />
-        )}
-
-        {/* Hotels page */}
-        {activeTab === 'hotels' && (
-          <HotelsPage onSelectHotel={hotel => { setSelectedHotel(hotel); setActiveTab('hotel_detail'); }} />
-        )}
-
-        {/* Hotel detail page */}
-        {activeTab === 'hotel_detail' && selectedHotel && (
-          <HotelDetailPage
-            hotel={selectedHotel}
-            onBack={() => setActiveTabWithUrl('hotels')}
-          />
-        )}
-
-        {/* Tourism page */}
-        {activeTab === 'tourism' && (
-          <TourismPage onSelectItem={item => { setSelectedTourismItem(item); setActiveTab('tourism_detail'); }} />
-        )}
-
-        {/* Tourism detail page */}
-        {activeTab === 'tourism_detail' && selectedTourismItem && (
-          <TourismDetailPage
-            item={selectedTourismItem}
-            onBack={() => setActiveTabWithUrl('tourism')}
-          />
-        )}
-
-        {/* Terms page */}
-        {activeTab === 'terms' && (
-          <TermsPage onBack={() => setActiveTabWithUrl('explore')} />
-        )}
-
-        {/* Privacy page */}
-        {activeTab === 'privacy' && (
-          <PrivacyPage onBack={() => setActiveTabWithUrl('explore')} />
-        )}
-        </motion.main>
-      </AnimatePresence>
-
-      {/* Compare Drawer */}
-      <CompareDrawer
-        listings={compareListingsData}
-        currency={currency}
-        isOpen={showCompareDrawer}
-        onClose={() => setShowCompareDrawer(false)}
-        onRemove={(id) => toggleCompare(id)}
-        onClear={() => setCompareListings([])}
-        onViewDetail={(id) => handleListingClick(id)}
-      />
-
-      {/* Modal form for listing creation trigger */}
-      <AddListingModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddListing={handleAddListing}
-      />
-
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setShowAuthModal(false)}
-        />
+      {mainSearchBarQuery && (
+       <button onClick={() => setMainSearchBarQuery('')} className="text-gray-400 hover:text-gray-600 :text-gray-300 text-lg leading-none">×</button>
       )}
+      </div>
 
-      <HelpWidget />
+      <div className="w-px bg-gray-200 self-stretch my-3" />
 
-      <Footer
-        onTermsClick={() => setActiveTab('terms')}
-        onPrivacyClick={() => setActiveTab('privacy')}
-        onHelpClick={() => {}}
-      />
+      <div className="relative">
+      <button onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+       className="h-full flex items-center gap-2 px-5 text-sm text-gray-700 hover:bg-gray-50 :bg-gray-800 cursor-pointer whitespace-nowrap transition-colors"
+      >
+       <MapPin size={14} className="text-gray-400" />
+       <span>{selectedCity === 'all' ? 'ყველა ქალაქი' : selectedCity}</span>
+       <ChevronDown size={14} className="text-gray-400" />
+      </button>
+      {isCityDropdownOpen && (
+       <div className="absolute left-0 top-full mt-1 min-w-[160px] bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+       {[{ value: 'all', label: 'ყველა ქალაქი' }, ...GEORGIAN_LOCATIONS.popular.map(c => ({ value: c, label: c }))].map((opt) => (
+        <button key={opt.value}
+        onClick={() => { setSelectedCity(opt.value); setIsCityDropdownOpen(false); }}
+        className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 :bg-gray-800 cursor-pointer transition-colors ${
+         selectedCity === opt.value ? 'text-ss-primary font-semibold bg-violet-50 ' : 'text-gray-700 '
+        }`}
+        >
+        {opt.label}
+        {selectedCity === opt.value && <Check size={12} className="text-ss-primary" />}
+        </button>
+       ))}
+       </div>
+      )}
+      </div>
+
+      <div className="w-px bg-gray-200 self-stretch my-3" />
+
+      <button className="flex items-center gap-2 bg-ss-primary hover:bg-ss-primary-dark text-white font-semibold px-7 text-sm transition-colors cursor-pointer m-2 rounded-xl">
+      <Search size={15} />
+      <span>ძებნა</span>
+      </button>
+     </div>
+     </div>
+
     </div>
-  );
+    </div>
+   </div>
+
+   {/* ── Results ── */}
+   <div id="results-section" className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+    <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+    {/* Sidebar */}
+    <div className="lg:w-64 xl:w-72 shrink-0 w-full">
+     <SidebarFilter
+     selectedType={selectedType} setSelectedType={setSelectedType}
+     searchArea={searchArea} setSearchArea={setSearchArea}
+     currency={currency} toggleCurrency={() => setCurrency(p => p === 'GEL' ? 'USD' : 'GEL')}
+     language={language} setLanguage={setLanguage}
+     selectedCity={selectedCity} setSelectedCity={(city) => { setSelectedCity(city); setSelectedDistrict('all'); }}
+     selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict}
+     roomFilter={roomFilter} setRoomFilter={setRoomFilter}
+     cities={citiesList} districts={districtsList}
+     priceMin={priceMin} setPriceMin={setPriceMin}
+     priceMax={priceMax} setPriceMax={setPriceMax}
+     selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus}
+     searchHistory={searchHistory}
+     onSearchHistorySelect={(item) => {
+      if (item.filters.type) setSelectedType(item.filters.type as any);
+      if (item.filters.city) setSelectedCity(item.filters.city);
+      if (item.filters.district) setSelectedDistrict(item.filters.district);
+      if (item.filters.rooms) setRoomFilter(item.filters.rooms);
+      if (item.filters.min) setPriceMin(item.filters.min);
+      if (item.filters.max) setPriceMax(item.filters.max);
+      if (item.filters.status) setSelectedStatus(item.filters.status);
+      if (item.query) setMainSearchBarQuery(item.query);
+     }}
+     onSearchHistoryRemove={removeHistoryItem}
+     onSearchHistoryClear={clearSearchHistory}
+     recentViews={recentViews}
+     onRecentViewSelect={(id) => handleListingClick(id)}
+     onRecentViewRemove={removeRecentView}
+     onRecentViewsClear={clearRecentViews}
+     />
+    </div>
+
+    {/* Grid / Map */}
+    <div className="flex-1 min-w-0 space-y-4">
+     {/* Results bar with sort + view toggle + compare */}
+     {(() => {
+     const typeGeo: Record<string,string> = { all:'ყველა', sale:'იყიდება', rent:'ქირავდება', mortgage:'იპოთეკა', pledge:'გირაო' };
+     return (
+      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2.5 gap-2">
+      <p className="text-sm text-gray-700 shrink-0">
+       <span className="font-bold text-gray-900 ">{filteredListings.length}</span>
+       <span className="text-gray-400 ml-1 hidden sm:inline">{typeGeo[selectedType] ?? selectedType}</span>
+      </p>
+      <div className="flex items-center gap-2">
+       {compareListings.length > 0 && (
+       <button
+        onClick={() => setShowCompareDrawer(true)}
+        className="flex items-center gap-1.5 text-[12px] font-semibold text-ss-primary bg-violet-50 border border-violet-200 px-2.5 py-1.5 rounded-lg hover:bg-violet-100 :bg-violet-900/30 transition-colors cursor-pointer"
+       >
+        <Scale size={13} />
+        შედარება ({compareListings.length})
+       </button>
+       )}
+       <select
+       value={sortOrder}
+       onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
+       className="text-[12px] text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-ss-primary cursor-pointer"
+       >
+       <option value="vip">VIP → სტანდარტი</option>
+       <option value="newest">ახალი → ძველი</option>
+       <option value="price_asc">ფასი: დაბლა ↑</option>
+       <option value="price_desc">ფასი: მაღალა ↓</option>
+       </select>
+       <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+       <button
+        onClick={() => setViewMode('grid')}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+        viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700 :text-gray-200'
+        }`}
+       >
+        <LayoutGrid size={14} />
+       </button>
+       <button
+        onClick={() => setViewMode('map')}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+        viewMode === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700 :text-gray-200'
+        }`}
+       >
+        <Map size={14} />
+       </button>
+       </div>
+      </div>
+      </div>
+     );
+     })()}
+
+     {/* Map view */}
+     {viewMode === 'map' && (
+     <div className="h-[600px] rounded-xl overflow-hidden border border-gray-200 ">
+      <MapView
+      listings={filteredListings}
+      favorites={favorites}
+      currency={currency}
+      onListingClick={handleListingClick}
+      onFavoriteToggle={handleFavoriteToggle}
+      />
+     </div>
+     )}
+
+     {viewMode === 'grid' && (
+     filteredListings.length === 0 ? (
+      <EmptyState
+      type="search"
+      actionLabel="ფილტრების გასუფთავება"
+      onAction={() => { setSelectedType('all'); setSearchArea(''); setMainSearchBarQuery(''); setSelectedCity('all'); setSelectedDistrict('all'); setRoomFilter('any'); setPriceMin(''); setPriceMax(''); setSelectedStatus('all'); }}
+      />
+     ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {filteredListings.map((listing) => (
+       <ListingCard
+       key={listing.id}
+       listing={listing}
+       isFavorited={favorites.includes(listing.id)}
+       onFavoriteToggle={handleFavoriteToggle}
+       currency={currency}
+       exchangeRate={exchangeRate}
+       onCardClick={() => handleListingClick(listing.id)}
+       isCompareSelected={compareListings.includes(listing.id)}
+       onCompareToggle={toggleCompare}
+       />
+      ))}
+      </div>
+     )
+     )}
+    </div>
+    </div>
+   </div>
+
+   {/* ── Quick Search bento ── */}
+   <ScrollReveal>
+    <QuickSearch
+    onSelect={(filter) => {
+     setSelectedType('all');
+     setRoomFilter('any');
+     setSelectedStatus('all');
+     setSearchArea('');
+     if (filter.type) setSelectedType(filter.type as any);
+     if (filter.rooms) setRoomFilter(filter.rooms);
+     if (filter.status) setSelectedStatus(filter.status);
+     if (filter.searchArea) setSearchArea(filter.searchArea);
+     window.scrollTo({ top: document.getElementById('results-section')?.offsetTop ?? 400, behavior: 'smooth' });
+    }}
+    />
+   </ScrollReveal>
+
+   </div>
+  )}
+
+  {/* Detailed Viewing Page */}
+  {activeTab === 'detail' && selectedListingId && (
+   (() => {
+   const currentObj = listings.find((p) => p.id === selectedListingId);
+   if (!currentObj) return (
+    <div className="py-20 text-center font-sans text-xs font-bold text-red-500">
+    სამწუხაროდ, განცხადება ვერ მოიძებნა!
+    </div>
+   );
+   return (
+    <ListingDetail
+    listing={currentObj}
+    onBackClick={() => setActiveTabWithUrl('explore')}
+    favorites={favorites}
+    onFavoriteToggle={handleFavoriteToggle}
+    currency={currency}
+    exchangeRate={exchangeRate}
+    onAgentClick={handleAgentListingsFilter}
+    onSendMessage={handleDetailSendMessage}
+    />
+   );
+   })()
+  )}
+
+  {/* Profile Payments Hub View Page */}
+  {activeTab === 'profile' && (
+   <ProfileView
+   userProfile={userProfile}
+   setUserProfile={setUserProfile}
+   paymentCards={paymentCards}
+   setPaymentCards={setPaymentCards}
+   myListings={userListings}
+   onAddListingClick={() => setIsAddModalOpen(true)}
+   currency={currency}
+   />
+  )}
+
+  {/* Messaging Chat dialogue center Page */}
+  {activeTab === 'messages' && (
+   <ChatCenter />
+  )}
+
+  {/* Favorites Listings Grid tab */}
+  {activeTab === 'favorites' && (
+   <div className="max-w-7xl mx-auto px-4 py-8 font-sans" id="favorites-tab-view">
+   <div className="max-w-3xl mx-auto text-center mb-10">
+    <h2 className="text-xl font-bold text-ss-charcoal mb-1">რჩეული განცხადებები</h2>
+    <p className="text-xs text-ss-slate ">თქვენს მიერ შენახული და მოწონებული უძრავი ქონებები</p>
+   </div>
+
+   {favoritedListingsSubset.length === 0 ? (
+    <EmptyState
+    type="favorites"
+    actionLabel="განცხადებების ნახვა"
+    onAction={() => setActiveTab('explore')}
+    />
+   ) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+    {favoritedListingsSubset.map((listing) => (
+     <ListingCard
+     key={listing.id}
+     listing={listing}
+     isFavorited={true}
+     onFavoriteToggle={handleFavoriteToggle}
+     currency={currency}
+     exchangeRate={exchangeRate}
+     onCardClick={() => handleListingClick(listing.id)}
+     isCompareSelected={compareListings.includes(listing.id)}
+     onCompareToggle={toggleCompare}
+     />
+    ))}
+    </div>
+   )}
+   </div>
+  )}
+
+  {/* Add Property page with Telegram/WhatsApp auto-fill */}
+  {activeTab === 'add_property' && (
+   <AddProperty onBack={() => setActiveTabWithUrl('explore')} />
+  )}
+
+  {/* Admin Panel — admin only */}
+  {activeTab === 'admin' && isAdmin && (
+   <AdminPanel
+   localListings={listings}
+   onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
+   />
+  )}
+
+  {/* Hotels page */}
+  {activeTab === 'hotels' && (
+   <HotelsPage onSelectHotel={hotel => { setSelectedHotel(hotel); setActiveTab('hotel_detail'); }} />
+  )}
+
+  {/* Hotel detail page */}
+  {activeTab === 'hotel_detail' && selectedHotel && (
+   <HotelDetailPage
+   hotel={selectedHotel}
+   onBack={() => setActiveTabWithUrl('hotels')}
+   />
+  )}
+
+  {/* Tourism page */}
+  {activeTab === 'tourism' && (
+   <TourismPage onSelectItem={item => { setSelectedTourismItem(item); setActiveTab('tourism_detail'); }} />
+  )}
+
+  {/* Tourism detail page */}
+  {activeTab === 'tourism_detail' && selectedTourismItem && (
+   <TourismDetailPage
+   item={selectedTourismItem}
+   onBack={() => setActiveTabWithUrl('tourism')}
+   />
+  )}
+
+  {/* Terms page */}
+  {activeTab === 'terms' && (
+   <TermsPage onBack={() => setActiveTabWithUrl('explore')} />
+  )}
+
+  {/* Privacy page */}
+  {activeTab === 'privacy' && (
+   <PrivacyPage onBack={() => setActiveTabWithUrl('explore')} />
+  )}
+  </motion.main>
+  </AnimatePresence>
+
+  {/* Compare Drawer */}
+  <CompareDrawer
+  listings={compareListingsData}
+  currency={currency}
+  isOpen={showCompareDrawer}
+  onClose={() => setShowCompareDrawer(false)}
+  onRemove={(id) => toggleCompare(id)}
+  onClear={() => setCompareListings([])}
+  onViewDetail={(id) => handleListingClick(id)}
+  />
+
+  {/* Modal form for listing creation trigger */}
+  <AddListingModal
+  isOpen={isAddModalOpen}
+  onClose={() => setIsAddModalOpen(false)}
+  onAddListing={handleAddListing}
+  />
+
+  {showAuthModal && (
+  <AuthModal
+   onClose={() => setShowAuthModal(false)}
+   onSuccess={() => setShowAuthModal(false)}
+  />
+  )}
+
+  <HelpWidget />
+
+  <Footer
+  onTermsClick={() => setActiveTab('terms')}
+  onPrivacyClick={() => setActiveTab('privacy')}
+  onHelpClick={() => {}}
+  />
+ </div>
+ );
 }
