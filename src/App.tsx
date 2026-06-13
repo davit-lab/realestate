@@ -345,13 +345,15 @@ export default function App() {
 
  // Push new comments/messages generated directly inside housing detail comments list
  const handleDetailSendMessage = async (listingId: string, messageText: string) => {
+  console.log('[handleDetailSendMessage] called', { listingId, messageText, isSupabaseConfigured, userId: user?.id });
   const listing = listings.find((l) => l.id === listingId);
-  if (!listing) return;
+  if (!listing) { console.warn('[handleDetailSendMessage] listing not found'); return; }
 
   // ── Supabase chat ──
   if (isSupabaseConfigured && user?.id) {
     const agentId = listing.user_id || null;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId);
+    console.log('[handleDetailSendMessage] supabase path', { agentId, isUuid, title: listing.title });
 
     // 1. Find existing conversation for this listing
     let convQuery = supabase.from('conversations').select('*').eq('buyer_id', user.id);
@@ -362,11 +364,12 @@ export default function App() {
     }
     if (agentId) convQuery = convQuery.eq('agent_id', agentId);
     const { data: existingConvs, error: findErr } = await convQuery.limit(1);
-    if (findErr) console.error('[handleDetailSendMessage] find conv error:', findErr.message);
+    console.log('[handleDetailSendMessage] find result', { existingConvs: existingConvs?.length || 0, findErr: findErr?.message });
 
     let convId: string;
     if (existingConvs && existingConvs.length > 0) {
       convId = existingConvs[0].id;
+      console.log('[handleDetailSendMessage] using existing conv', convId);
     } else {
       const insertPayload: Record<string, unknown> = {
         title: listing.title,
@@ -374,6 +377,7 @@ export default function App() {
         agent_id: agentId,
       };
       if (isUuid) insertPayload.listing_id = listingId;
+      console.log('[handleDetailSendMessage] creating conv with payload', insertPayload);
       const { data: newConv, error: convErr } = await supabase
         .from('conversations')
         .insert(insertPayload)
@@ -383,18 +387,24 @@ export default function App() {
         console.error('[handleDetailSendMessage] create conv error:', convErr.message, convErr.details, convErr.hint);
         return;
       }
-      if (!newConv) return;
+      if (!newConv) { console.warn('[handleDetailSendMessage] newConv is null'); return; }
       convId = newConv.id;
+      console.log('[handleDetailSendMessage] created conv', convId);
     }
 
     // 2. Insert message
-    const { error: msgErr } = await supabase.from('messages').insert({
+    const msgPayload = {
       chat_id: convId,
       sender_id: user.id,
       content: messageText,
-      status: 'sent',
-    });
+      status: 'sent' as const,
+    };
+    console.log('[handleDetailSendMessage] inserting message', msgPayload);
+    const { data: msgData, error: msgErr } = await supabase.from('messages').insert(msgPayload).select();
+    console.log('[handleDetailSendMessage] insert result', { msgData: msgData?.length || 0, msgErr: msgErr?.message });
     if (msgErr) console.error('[handleDetailSendMessage] insert msg error:', msgErr.message, msgErr.details, msgErr.hint);
+  } else {
+    console.warn('[handleDetailSendMessage] skipping supabase — not configured or no user', { isSupabaseConfigured, userId: user?.id });
   }
 
   // ── LocalStorage fallback (kept for backward compat) ──
@@ -830,6 +840,7 @@ export default function App() {
    setPaymentCards={setPaymentCards}
    myListings={userListings}
    onAddListingClick={() => setIsAddModalOpen(true)}
+   onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
    currency={currency}
    />
   )}

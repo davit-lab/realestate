@@ -11,11 +11,11 @@ import { useUserPackages } from '../hooks/useUserPackages';
 import { useBookings } from '../hooks/useBookings';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-interface Props { userProfile: any; setUserProfile: any; paymentCards: PaymentCard[]; setPaymentCards: any; myListings: Listing[]; onAddListingClick: () => void; currency: 'GEL' | 'USD'; }
+interface Props { userProfile: any; setUserProfile: any; paymentCards: PaymentCard[]; setPaymentCards: any; myListings: Listing[]; onAddListingClick: () => void; onDeleteListing?: (id: string) => void; currency: 'GEL' | 'USD'; }
 
 type TabId = 'dashboard' | 'my_listings' | 'bookings' | 'boost' | 'wallet' | 'verification' | 'settings';
 
-export default function ProfileView({ userProfile, setUserProfile, myListings, onAddListingClick, currency }: Props) {
+export default function ProfileView({ userProfile, setUserProfile, myListings, onAddListingClick, onDeleteListing, currency }: Props) {
  const { user, profile, refreshProfile } = useAuth();
  const { updateProfile, uploadAvatar, saving, uploadingAvatar } = useProfile(user?.id);
  const { stats } = useViewStats(user?.id);
@@ -49,6 +49,7 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
  const [actBoost, setActBoost] = useState<string | null>(null);
  const [bFb, setBFb] = useState<string | null>(null);
  const [selectedBoostListingId, setSelectedBoostListingId] = useState<string | null>(null);
+ const [boostedMap, setBoostedMap] = useState<Record<string, string>>({});
 
  const sym = currency === 'GEL' ? '₾' : '$';
 
@@ -179,6 +180,14 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
      {myListings.map(l => {
       const p = (currency==='GEL' ? l.priceLari : l.priceUsd).toLocaleString();
+      const handleDelete = async () => {
+       if (!window.confirm('განცხადების წაშლა? ეს ქმედება შეუქცევადია.')) return;
+       if (isSupabaseConfigured) {
+        const { error } = await supabase.from('properties').delete().eq('id', l.id);
+        if (error) { alert('შეცდომა: ' + error.message); return; }
+       }
+       onDeleteListing?.(l.id);
+      };
       return (
       <div key={l.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 hover:shadow-md transition-all group">
        <div className="relative h-40 bg-gray-100">
@@ -191,6 +200,7 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
         </span>
        )}
        <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-1 rounded-lg">{l.type==='sale'?'იყიდება':l.type==='rent'?'ქირავდება':l.type==='mortgage'?'იპოთეკა':l.type==='pledge'?'გირაო':'ქირავდება დღიურად'}</span>
+       <button onClick={handleDelete} className="absolute top-3 right-3 bg-red-500/80 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="წაშლა"><Trash2 size={14}/></button>
        </div>
        <div className="p-4">
        <h5 className="font-bold text-[13px] text-gray-900 line-clamp-1 mb-1">{l.title}</h5>
@@ -309,9 +319,9 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
           <button key={l.id} onClick={()=>setSelectedBoostListingId(l.id)} className="text-left bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-900 hover:shadow-md transition-all cursor-pointer group">
            <div className="relative h-32 bg-gray-100">
             <img src={l.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={l.title} />
-            {l.vipStatus !== 'standard' && (
-             <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white shadow-sm ${l.vipStatus==='premium'?'bg-amber-600':l.vipStatus==='super'?'bg-emerald-600':'bg-slate-500'}`}>
-              {l.vipStatus.toUpperCase()}
+            {(boostedMap[l.id] || l.vipStatus) !== 'standard' && (
+             <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white shadow-sm ${(boostedMap[l.id]||l.vipStatus)==='premium'?'bg-amber-600':(boostedMap[l.id]||l.vipStatus)==='super'?'bg-emerald-600':'bg-slate-500'}`}>
+              {(boostedMap[l.id]||l.vipStatus).toUpperCase()}
              </span>
             )}
            </div>
@@ -350,7 +360,8 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {boosts.map(plan => {
          const sel = myListings.find(l => l.id === selectedBoostListingId);
-         const already = sel?.vipStatus === plan.id;
+         const effectiveVip = boostedMap[selectedBoostListingId!] || sel?.vipStatus;
+         const already = effectiveVip === plan.id;
          const ok = userProfile.balance >= plan.price;
          return (
           <div key={plan.id} className={`relative rounded-xl border-2 p-5 flex flex-col transition-all ${already ? plan.border + ' shadow-lg' : 'border-gray-200 hover:border-gray-400'}`}>
@@ -377,14 +388,22 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
               } catch (e) { /* ignore localStorage errors */ }
               // Update Supabase
               if (isSupabaseConfigured) {
-               await supabase.from('properties').update({ vip_status: plan.id }).eq('id', selectedBoostListingId);
+               const { error: updateErr } = await supabase.from('properties').update({ vip_status: plan.id }).eq('id', selectedBoostListingId);
+               if (updateErr) {
+                console.error('[boost] properties update error:', updateErr.message, updateErr.details, updateErr.hint);
+                throw new Error(updateErr.message);
+               }
+               console.log('[boost] properties updated for', selectedBoostListingId, 'to', plan.id);
                if (user?.id) {
-                const { data: prof } = await supabase.from('profiles').select('balance').eq('id', user.id).single();
+                const { data: prof, error: balErr } = await supabase.from('profiles').select('balance').eq('id', user.id).single();
+                if (balErr) console.error('[boost] balance fetch error:', balErr.message);
                 const newBal = Math.max(0, (prof?.balance ?? userProfile.balance) - plan.price);
-                await supabase.from('profiles').update({ balance: newBal }).eq('id', user.id);
+                const { error: balUpdErr } = await supabase.from('profiles').update({ balance: newBal }).eq('id', user.id);
+                if (balUpdErr) console.error('[boost] balance update error:', balUpdErr.message);
                }
                window.dispatchEvent(new CustomEvent('adjarahome:refresh-listings'));
               }
+              setBoostedMap(prev => ({ ...prev, [selectedBoostListingId]: plan.id }));
               setUserProfile((p:any)=>({...p, balance: Math.max(0, p.balance - plan.price)}));
               setBFb(`${plan.name} გააქტიურდა!`);
               setTimeout(()=>setBFb(null),4000);
