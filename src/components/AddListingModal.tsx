@@ -86,6 +86,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  const { user } = useAuth();
  const [section, setSection] = useState<Section | null>(null);
  const [success, setSuccess] = useState(false);
+ const [isSubmitting, setIsSubmitting] = useState(false);
  const [images, setImages] = useState<string[]>([]);
  const [imageFiles, setImageFiles] = useState<File[]>([]);
 
@@ -141,11 +142,13 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
+ if (isSubmitting) return;
  setMapError('');
  if (section === 'real_estate') {
   if (!re.priceGel || !re.area) { alert('შეავსეთ ფასი და ფართობი'); return; }
   if (pickedLat == null || pickedLng == null) { setMapError('გთხოვთ მონიშნოთ მდებარეობა რუკაზე'); return; }
   if (!selectedPackage) { alert('აირჩიეთ პაკეტი'); return; }
+  setIsSubmitting(true);
   const priceLari = parseFloat(re.priceGel) || 0;
   const newListing: Listing = {
   id: `custom-${Date.now()}`,
@@ -195,6 +198,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
   const { error } = await supabase.from('properties').insert(payload);
   if (error) {
    console.error('Supabase insert error:', error);
+   setIsSubmitting(false);
    alert('განცხადების შენახვა ვერ მოხერხდა: ' + error.message);
    return;
   }
@@ -203,6 +207,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  }
  setSuccess(true);
  setTimeout(() => {
+  setIsSubmitting(false);
   setSuccess(false); setSection(null); setImages([]); setImageFiles([]);
   setPickedLat(null); setPickedLng(null); setShowMapPicker(false); setMapError('');
   onClose();
@@ -412,10 +417,10 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
     <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-[13px] font-semibold hover:bg-gray-50 cursor-pointer">გაუქმება</button>
     <button
     type="submit"
-    disabled={pickedLat == null || pickedLng == null || !selectedPackage}
+    disabled={isSubmitting || pickedLat == null || pickedLng == null || !selectedPackage}
     className="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-[13px] font-bold cursor-pointer transition-colors"
     >
-    გამოქვეყნება
+    {isSubmitting ? 'იტვირთება...' : 'გამოქვეყნება'}
     </button>
    </div>
    </form>
@@ -538,7 +543,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
 
     <div className="flex gap-2 pt-1">
     <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 text-[13px] font-bold hover:bg-gray-50 cursor-pointer transition-colors">გაუქმება</button>
-    <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-[13px] font-bold cursor-pointer transition-colors shadow-lg shadow-blue-200/50">გამოქვეყნება</button>
+    <button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 rounded-xl text-[13px] font-bold cursor-pointer transition-colors shadow-lg shadow-blue-200/50">{isSubmitting ? 'იტვირთება...' : 'გამოქვეყნება'}</button>
     </div>
    </div>
    </form>
@@ -663,9 +668,9 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
 
     <div className="flex gap-2 pt-1">
     <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 text-[13px] font-bold hover:bg-gray-50 cursor-pointer transition-colors">გაუქმება</button>
-    <button type="submit" className={`flex-1 text-white py-3 rounded-xl text-[13px] font-bold cursor-pointer transition-colors ${
+    <button type="submit" disabled={isSubmitting} className={`flex-1 text-white py-3 rounded-xl text-[13px] font-bold cursor-pointer transition-colors disabled:opacity-60 ${
      tour.cat==='flights' ? 'bg-blue-600 hover:bg-blue-700' : tour.cat==='trains' ? 'bg-emerald-600 hover:bg-emerald-700' : tour.cat==='concerts' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-500 hover:bg-orange-600'
-    }`}>გამოქვეყნება</button>
+    }`}>{isSubmitting ? 'იტვირთება...' : 'გამოქვეყნება'}</button>
     </div>
    </div>
    </form>

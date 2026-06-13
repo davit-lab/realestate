@@ -59,6 +59,8 @@ export default function ChatsTab({
   const [msgLoading, setMsgLoading] = useState(false);
   const [senderMap, setSenderMap] = useState<Map<string, { name: string }>>(new Map());
 
+  console.log('[ChatsTab] conversations:', conversations.length, 'loading:', loading);
+
   const filtered = useMemo(() => {
     if (!search) return conversations;
     const s = search.toLowerCase();

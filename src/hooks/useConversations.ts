@@ -20,36 +20,28 @@ export function useConversations(userId: string | undefined) {
     }
     setLoading(true);
 
-    // Get all chat_ids where this user has sent or received messages
-    const { data: msgData, error: msgError } = await supabase
-      .from('messages')
-      .select('chat_id')
-      .or(`sender_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
+    // Directly query conversations where user is buyer or agent
+    const { data: convData, error: convError } = await supabase
+      .from('conversations')
+      .select('*')
+      .or(`buyer_id.eq.${userId},agent_id.eq.${userId}`)
+      .order('last_sent_at', { ascending: false })
+      .limit(100);
 
-    if (msgError || !msgData) {
-      setLoading(false);
-      return;
-    }
-
-    const chatIds = [...new Set(msgData.map((m) => m.chat_id))];
-    if (chatIds.length === 0) {
+    if (convError || !convData) {
+      console.error('[useConversations] fetch error:', convError?.message);
       setConversations([]);
       setLoading(false);
       return;
     }
 
-    // Get conversation details + unread counts
-    const { data: convData, error: convError } = await supabase
-      .from('conversations')
-      .select('*')
-      .in('id', chatIds)
-      .order('last_sent_at', { ascending: false });
-
-    if (convError || !convData) {
+    if (convData.length === 0) {
+      setConversations([]);
       setLoading(false);
       return;
     }
+
+    const chatIds = convData.map((c) => c.id);
 
     // Get unread count for each conversation
     const { data: unreadData } = await supabase
@@ -81,14 +73,20 @@ export function useConversations(userId: string | undefined) {
   }, [fetchConversations]);
 
   const createConversation = useCallback(
-    async (title: string) => {
+    async (title: string, buyerId?: string, agentId?: string) => {
       if (!isSupabaseConfigured || !userId) return null;
+      const payload: Record<string, unknown> = { title };
+      if (buyerId) payload.buyer_id = buyerId;
+      if (agentId) payload.agent_id = agentId;
       const { data, error } = await supabase
         .from('conversations')
-        .insert({ title })
+        .insert(payload)
         .select()
         .single();
-      if (error) return null;
+      if (error) {
+        console.error('[useConversations] create error:', error.message);
+        return null;
+      }
       await fetchConversations();
       return data?.id || null;
     },

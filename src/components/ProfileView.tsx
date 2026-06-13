@@ -9,6 +9,7 @@ import { useVerification } from '../hooks/useVerification';
 import { usePaymentCards } from '../hooks/usePaymentCards';
 import { useUserPackages } from '../hooks/useUserPackages';
 import { useBookings } from '../hooks/useBookings';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface Props { userProfile: any; setUserProfile: any; paymentCards: PaymentCard[]; setPaymentCards: any; myListings: Listing[]; onAddListingClick: () => void; currency: 'GEL' | 'USD'; }
 
@@ -47,6 +48,7 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
  const [rFb, setRFb] = useState<string | null>(null);
  const [actBoost, setActBoost] = useState<string | null>(null);
  const [bFb, setBFb] = useState<string | null>(null);
+ const [selectedBoostListingId, setSelectedBoostListingId] = useState<string | null>(null);
 
  const sym = currency === 'GEL' ? '₾' : '$';
 
@@ -285,20 +287,123 @@ export default function ProfileView({ userProfile, setUserProfile, myListings, o
    {activeTab==='boost' && (
     <div className="space-y-4">
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-     <div className="mb-5"><h4 className="font-bold text-[15px]">განცხადების პაკეტები</h4><p className="text-[12px] text-gray-500 mt-1">აირჩიეთ პაკეტი და დადეთ განცხადება.</p></div>
-     {bFb && <div className="mb-4 flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-[12px] font-semibold"><CheckCircle size={15}/>{bFb}</div>}
-     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-     {boosts.map(plan=>{ const a=actBoost===plan.id; const ok=userProfile.balance>=plan.price; return (
-      <div key={plan.id} className={`relative rounded-xl border-2 p-5 flex flex-col transition-all ${a?plan.border+' shadow-lg':'border-gray-200 hover:border-gray-400'}`}>
-      {plan.id==='premium'&&<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow">პოპულარული</div>}
-      <div className={`w-10 h-10 rounded-xl ${plan.color} flex items-center justify-center text-white mb-3 text-[9px] font-black`}>{plan.badge}</div>
-      <div className="mb-1"><span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{plan.name}</span></div>
-      <div className="flex items-baseline gap-1 mb-4"><span className="text-[28px] font-black leading-none">{plan.price}</span><span className="font-bold text-sm">₾</span><span className="text-gray-500 text-[11px]">/განცხადება</span></div>
-      <ul className="space-y-2 mb-5 flex-1">{plan.features.map((f,i)=>(<li key={i} className="flex items-start gap-2 text-[11px] font-medium"><Check size={12} className="mt-0.5 shrink-0"/>{f}</li>))}</ul>
-      <button onClick={()=>{if(!ok){setBFb(`ბალანსი არ არის. საჭიროა ${plan.price} ₾`); setTimeout(()=>setBFb(null),3500); return;} setUserProfile((p:any)=>({...p,balance:p.balance-plan.price})); setActBoost(plan.id); setBFb(`${plan.name} გააქტიურდა!`); setTimeout(()=>setBFb(null),4000);}} disabled={a} className={`w-full py-2.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${a?'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default':ok?plan.color+' '+plan.text+' hover:opacity-90':'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>{a?<><CheckCircle size={14}/> გააქტიურებულია</>:<><ArrowRight size={14}/> {plan.price} ₾</>}</button>
-      </div>
-     );})}
+     <div className="mb-5">
+      <h4 className="font-bold text-[15px]">განცხადების ბუსთი</h4>
+      <p className="text-[12px] text-gray-500 mt-1">{selectedBoostListingId ? 'აირჩიეთ პაკეტი განცხადების გასაუმჯობესებლად.' : 'აირჩიეთ თქვენი განცხადება, რომლის გაუმჯობესებაც გინდათ.'}</p>
      </div>
+     {bFb && <div className="mb-4 flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-[12px] font-semibold"><CheckCircle size={15}/>{bFb}</div>}
+
+     {!selectedBoostListingId ? (
+      myListings.length === 0 ? (
+       <div className="bg-gray-50 border border-gray-200 rounded-2xl p-10 text-center">
+        <Layers size={28} className="mx-auto mb-3 text-gray-300" />
+        <p className="font-bold text-[14px] text-gray-700 mb-1">განცხადება არ არის</p>
+        <p className="text-gray-400 text-[12px] mb-4">ჯერ დაამატეთ განცხადება ბუსთისთვის</p>
+        <button onClick={onAddListingClick} className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl font-medium text-[12px] cursor-pointer transition-colors">განცხადების დამატება</button>
+       </div>
+      ) : (
+       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {myListings.map(l => {
+         const p = (currency==='GEL' ? l.priceLari : l.priceUsd).toLocaleString();
+         return (
+          <button key={l.id} onClick={()=>setSelectedBoostListingId(l.id)} className="text-left bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-900 hover:shadow-md transition-all cursor-pointer group">
+           <div className="relative h-32 bg-gray-100">
+            <img src={l.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={l.title} />
+            {l.vipStatus !== 'standard' && (
+             <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white shadow-sm ${l.vipStatus==='premium'?'bg-amber-600':l.vipStatus==='super'?'bg-emerald-600':'bg-slate-500'}`}>
+              {l.vipStatus.toUpperCase()}
+             </span>
+            )}
+           </div>
+           <div className="p-3">
+            <h5 className="font-bold text-[13px] text-gray-900 line-clamp-1 mb-1">{l.title}</h5>
+            <div className="flex items-center gap-1 text-[11px] text-gray-500 mb-2">
+             <MapPin size={11} />
+             <span>{l.district}, {l.city}</span>
+            </div>
+            <div className="flex items-center justify-between">
+             <span className="text-[14px] font-black text-gray-900">{p} {sym}</span>
+             <span className="text-[11px] text-gray-400">აირჩიე</span>
+            </div>
+           </div>
+          </button>
+         );
+        })}
+       </div>
+      )
+     ) : (
+      <div className="space-y-4">
+       {(() => {
+        const sel = myListings.find(l => l.id === selectedBoostListingId);
+        if (!sel) return null;
+        return (
+         <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-3">
+          <img src={sel.image} className="w-12 h-12 rounded-lg object-cover border border-gray-200" referrerPolicy="no-referrer" alt={sel.title} />
+          <div className="flex-1 min-w-0">
+           <p className="font-bold text-[13px] text-gray-900 truncate">{sel.title}</p>
+           <p className="text-[11px] text-gray-500">{sel.district}, {sel.city}</p>
+          </div>
+          <button onClick={()=>{setSelectedBoostListingId(null); setActBoost(null); setBFb(null);}} className="text-gray-400 hover:text-gray-700 cursor-pointer text-[11px] font-medium shrink-0">შეცვლა</button>
+         </div>
+        );
+       })()}
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {boosts.map(plan => {
+         const sel = myListings.find(l => l.id === selectedBoostListingId);
+         const already = sel?.vipStatus === plan.id;
+         const ok = userProfile.balance >= plan.price;
+         return (
+          <div key={plan.id} className={`relative rounded-xl border-2 p-5 flex flex-col transition-all ${already ? plan.border + ' shadow-lg' : 'border-gray-200 hover:border-gray-400'}`}>
+           {plan.id==='premium' && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow">პოპულარული</div>}
+           <div className={`w-10 h-10 rounded-xl ${plan.color} flex items-center justify-center text-white mb-3 text-[9px] font-black`}>{plan.badge}</div>
+           <div className="mb-1"><span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">{plan.name}</span></div>
+           <div className="flex items-baseline gap-1 mb-4"><span className="text-[28px] font-black leading-none">{plan.price}</span><span className="font-bold text-sm">₾</span><span className="text-gray-500 text-[11px]">/განცხადება</span></div>
+           <ul className="space-y-2 mb-5 flex-1">{plan.features.map((f,i)=>(<li key={i} className="flex items-start gap-2 text-[11px] font-medium"><Check size={12} className="mt-0.5 shrink-0"/>{f}</li>))}</ul>
+           <button
+            onClick={async () => {
+             if (!ok) { setBFb(`ბალანსი არ არის. საჭიროა ${plan.price} ₾`); setTimeout(()=>setBFb(null),3500); return; }
+             if (!selectedBoostListingId) return;
+             setActBoost(plan.id);
+             setBFb('იტვირთება...');
+             try {
+              // Update localStorage listings (fallback / local-only listings)
+              try {
+               const raw = localStorage.getItem('adjarahome_listings');
+               if (raw) {
+                const arr = JSON.parse(raw) as any[];
+                const next = arr.map((l: any) => l.id === selectedBoostListingId ? { ...l, vipStatus: plan.id } : l);
+                localStorage.setItem('adjarahome_listings', JSON.stringify(next));
+               }
+              } catch (e) { /* ignore localStorage errors */ }
+              // Update Supabase
+              if (isSupabaseConfigured) {
+               await supabase.from('properties').update({ vip_status: plan.id }).eq('id', selectedBoostListingId);
+               if (user?.id) {
+                const { data: prof } = await supabase.from('profiles').select('balance').eq('id', user.id).single();
+                const newBal = Math.max(0, (prof?.balance ?? userProfile.balance) - plan.price);
+                await supabase.from('profiles').update({ balance: newBal }).eq('id', user.id);
+               }
+               window.dispatchEvent(new CustomEvent('adjarahome:refresh-listings'));
+              }
+              setUserProfile((p:any)=>({...p, balance: Math.max(0, p.balance - plan.price)}));
+              setBFb(`${plan.name} გააქტიურდა!`);
+              setTimeout(()=>setBFb(null),4000);
+             } catch (e) {
+              setBFb('შეცდომა დამუშავებისას');
+              setTimeout(()=>setBFb(null),4000);
+             }
+            }}
+            disabled={already}
+            className={`w-full py-2.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${already ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default' : ok ? plan.color + ' ' + plan.text + ' hover:opacity-90' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+           >
+            {already ? <><CheckCircle size={14}/> გააქტიურებულია</> : <><ArrowRight size={14}/> {plan.price} ₾</>}
+           </button>
+          </div>
+         );
+        })}
+       </div>
+      </div>
+     )}
     </div>
     <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-[11px] text-gray-500 flex items-start gap-3"><ShieldCheck size={16} className="shrink-0 mt-0.5"/><span>პაკეტი ერთ განცხადებაზე მოქმედებს.</span></div>
     </div>

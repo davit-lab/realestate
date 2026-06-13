@@ -262,7 +262,7 @@ export default function App() {
 
  // Add new uploaded properties to arrays + Supabase
  const handleAddListing = async (newListing: Listing) => {
- setListings([newListing, ...listings]);
+ setListings((prev) => [newListing, ...prev]);
  setUserProfile((prev) => ({
   ...prev,
   balance: Math.max(0, prev.balance - (newListing.vipStatus === 'premium' ? 8 : newListing.vipStatus === 'super' ? 3 : newListing.vipStatus === 'basic' ? 1 : 0)),
@@ -344,49 +344,83 @@ export default function App() {
  }, [selectedType, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, selectedStatus, mainSearchBarQuery, addSearch]);
 
  // Push new comments/messages generated directly inside housing detail comments list
- const handleDetailSendMessage = (listingId: string, messageText: string) => {
- // Find the listings title and author
- const listing = listings.find((l) => l.id === listingId);
- if (!listing) return;
+ const handleDetailSendMessage = async (listingId: string, messageText: string) => {
+  const listing = listings.find((l) => l.id === listingId);
+  if (!listing) return;
 
- // Check if chat conversation already exists
- const existingChat = chats.find((c) => c.listingId === listingId);
+  // ── Supabase chat ──
+  if (isSupabaseConfigured && user?.id) {
+    const agentId = listing.user_id || null;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(listingId);
 
- if (existingChat) {
-  const updatedChats = chats.map((c) => {
-  if (c.id === existingChat.id) {
-   return {
-   ...c,
-   lastMessage: messageText,
-   time: 'ახლახან',
-   messages: [
-    ...c.messages,
-    { sender: 'user', text: messageText, time: 'ახლახან' as string },
-   ],
-   };
+    // 1. Find existing conversation for this listing
+    let convQuery = supabase.from('conversations').select('*').eq('buyer_id', user.id);
+    if (isUuid) {
+      convQuery = convQuery.eq('listing_id', listingId);
+    } else {
+      convQuery = convQuery.eq('title', listing.title);
+    }
+    if (agentId) convQuery = convQuery.eq('agent_id', agentId);
+    const { data: existingConvs, error: findErr } = await convQuery.limit(1);
+    if (findErr) console.error('[handleDetailSendMessage] find conv error:', findErr.message);
+
+    let convId: string;
+    if (existingConvs && existingConvs.length > 0) {
+      convId = existingConvs[0].id;
+    } else {
+      const insertPayload: Record<string, unknown> = {
+        title: listing.title,
+        buyer_id: user.id,
+        agent_id: agentId,
+      };
+      if (isUuid) insertPayload.listing_id = listingId;
+      const { data: newConv, error: convErr } = await supabase
+        .from('conversations')
+        .insert(insertPayload)
+        .select()
+        .single();
+      if (convErr) {
+        console.error('[handleDetailSendMessage] create conv error:', convErr.message, convErr.details, convErr.hint);
+        return;
+      }
+      if (!newConv) return;
+      convId = newConv.id;
+    }
+
+    // 2. Insert message
+    const { error: msgErr } = await supabase.from('messages').insert({
+      chat_id: convId,
+      sender_id: user.id,
+      content: messageText,
+      status: 'sent',
+    });
+    if (msgErr) console.error('[handleDetailSendMessage] insert msg error:', msgErr.message, msgErr.details, msgErr.hint);
   }
-  return c;
-  });
-  setChats(updatedChats);
-  setActiveChatId(existingChat.id);
- } else {
-  // Create new chat
-  const newChatId = `chat-new-${Date.now()}`;
-  const newChat = {
-  id: newChatId,
-  listingTitle: listing.title,
-  listingId: listing.id,
-  agentName: listing.author.name,
-  agentAvatar: listing.author.avatar,
-  lastMessage: messageText,
-  time: 'ახლახან',
-  messages: [
-   { sender: 'user' as const, text: messageText, time: 'ახლახან' },
-  ],
-  };
-  setChats([newChat, ...chats]);
-  setActiveChatId(newChatId);
- }
+
+  // ── LocalStorage fallback (kept for backward compat) ──
+  const existingChat = chats.find((c) => c.listingId === listingId);
+  if (existingChat) {
+    setChats(chats.map((c) =>
+      c.id === existingChat.id
+        ? { ...c, lastMessage: messageText, time: 'ახლახან', messages: [...c.messages, { sender: 'user', text: messageText, time: 'ახლახან' }] }
+        : c
+    ));
+    setActiveChatId(existingChat.id);
+  } else {
+    const newChatId = `chat-new-${Date.now()}`;
+    const newChat = {
+      id: newChatId,
+      listingTitle: listing.title,
+      listingId: listing.id,
+      agentName: listing.author.name,
+      agentAvatar: listing.author.avatar,
+      lastMessage: messageText,
+      time: 'ახლახან',
+      messages: [{ sender: 'user' as const, text: messageText, time: 'ახლახან' }],
+    };
+    setChats([newChat, ...chats]);
+    setActiveChatId(newChatId);
+  }
  };
 
  // Curate filtered announcements for the Explore Grid
