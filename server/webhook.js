@@ -228,12 +228,12 @@ app.post('/api/send-password-reset', async (req, res) => {
     }
 
     const actionLink = data.properties.action_link;
-    const fromEmail = process.env.FROM_EMAIL || 'noreply@adjarahome.ge';
+    const fromEmail = process.env.FROM_EMAIL || 'noreply@newlife.ge';
 
     await resend.emails.send({
       from: fromEmail,
       to: email,
-      subject: 'პაროლის აღდგენა — AdjaraHome',
+      subject: 'პაროლის აღდგენა — Newlife',
       html: `
         <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
           <h2 style="color:#111827;">პაროლის აღდგენა</h2>

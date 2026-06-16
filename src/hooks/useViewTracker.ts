@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-const VIEWED_LISTINGS_KEY = 'adjarahome_viewed_listings';
+const VIEWED_LISTINGS_KEY = 'newlife_viewed_listings';
 
 export function useViewTracker(listingId: string) {
   useEffect(() => {
@@ -22,12 +22,7 @@ export function useViewTracker(listingId: string) {
   }, [listingId]);
 }
 
-export function getViewCount(listingId: string): number {
-  try {
-    const listings = JSON.parse(localStorage.getItem('adjarahome_listings') || '[]');
-    const listing = listings.find((l: any) => l.id === listingId);
-    return listing?.viewCount || 0;
-  } catch {
-    return 0;
-  }
+export function getViewCount(_listingId: string): number {
+  // Views are tracked in Supabase listing_views table, not localStorage
+  return 0;
 }

@@ -18,7 +18,7 @@ interface ChatMessage {
 
 const AI_GREETING: ChatMessage = {
  role: 'ai',
- text: 'გამარჯობა! მე ვარ Adjarahome AI ასისტენტი. შემიძლია დაგეხმაროთ უძრავი ქონების ძიებაში, ფასების განხილვაში და რჩევების მიცემაში. რით შემიძლია დაგეხმაროთ?',
+ text: 'გამარჯობა! მე ვარ Newlife AI ასისტენტი. შემიძლია დაგეხმაროთ უძრავი ქონების ძიებაში, ფასების განხილვაში და რჩევების მიცემაში. რით შემიძლია დაგეხმაროთ?',
  suggestions: ['3-ოთახიანი ბათუმში', 'თბილისში საუკეთესო ფასი', 'იპოთეკის პირობები'],
 };
 
@@ -198,7 +198,7 @@ export default function AIChatWidget() {
      <Bot size={18} />
     </div>
     <div>
-     <p className="text-sm font-bold">Adjarahome AI</p>
+     <p className="text-sm font-bold">Newlife AI</p>
      <p className="text-[10px] text-purple-200 flex items-center gap-1">
      {kimiConnected ? (
       <><Zap size={9} className="text-emerald-300" /> Kimi K2.5</>

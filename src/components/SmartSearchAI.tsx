@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Sparkles, Search, X, Wand2, Building2, Banknote, BedDouble, MapPin } from 'lucide-react';
+import { Search, X, Building2, Banknote, BedDouble, MapPin } from 'lucide-react';
 
 interface ParsedQuery {
  city?: string;
@@ -125,7 +125,7 @@ export default function SmartSearchAI({ cities, districts, onSearch }: SmartSear
    focused ? 'border-ss-primary shadow-md' : 'border-gray-200'
   }`}>
    <div className="pl-4 shrink-0">
-   <Wand2 size={16} className="text-ss-primary" />
+   <Search size={16} className="text-ss-primary" />
    </div>
 
    {/* Inline chips appear inside input when parsed */}
@@ -192,7 +192,7 @@ export default function SmartSearchAI({ cities, districts, onSearch }: SmartSear
    disabled={!hasFilters}
    className="mr-1.5 p-2 rounded-full bg-ss-primary hover:bg-ss-primary-dark disabled:bg-gray-200 text-white transition-colors cursor-pointer shrink-0"
    >
-   <Sparkles size={14} />
+   <Search size={14} />
    </button>
   </div>
 
@@ -207,7 +207,7 @@ export default function SmartSearchAI({ cities, districts, onSearch }: SmartSear
      type="button"
      onMouseDown={(e) => e.preventDefault()}
      onClick={() => applyExample(ex)}
-     className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-200 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200 transition-colors cursor-pointer"
+     className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 transition-colors cursor-pointer"
     >
      {ex}
     </button>

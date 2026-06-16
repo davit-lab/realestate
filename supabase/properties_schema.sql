@@ -143,7 +143,15 @@ create table if not exists public.properties (
   vip_status      text default 'standard',
   author_name     text,
   author_avatar   text,
-  raw_message     text,
+  raw_message       text,
+  kitchen_area_sqm  numeric,
+  floor_type        text,
+  balconies         integer,
+  bathrooms         integer,
+  building_status   text,
+  building_type     text,
+  building_condition text,
+  additional_info   text[] default '{}',
   created_at      timestamptz default now(),
   updated_at      timestamptz default now()
 );

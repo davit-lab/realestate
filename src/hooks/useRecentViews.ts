@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Listing } from '../types';
 
-const STORAGE_KEY = 'adjarahome_recent_views';
+const STORAGE_KEY = 'newlife_recent_views';
 const MAX_ITEMS = 12;
 
 export interface RecentViewItem {

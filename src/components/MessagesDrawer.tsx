@@ -98,7 +98,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
    {/* Header */}
    <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between bg-white">
    <div className="flex items-center gap-2">
-    <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center">
+    <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center">
     <MessageSquare size={16} className="text-ss-primary" />
     </div>
     <h2 className="font-bold text-sm text-gray-900">შეტყობინებები</h2>
@@ -112,8 +112,8 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
    <div className="flex-1 overflow-y-auto bg-white">
    {chats.length === 0 ? (
     <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3 px-6 text-center">
-    <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center">
-     <MessageSquare size={28} className="text-purple-300" />
+    <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center">
+     <MessageSquare size={28} className="text-gray-400" />
     </div>
     <p className="text-sm font-medium">მიმოწერა არ არის</p>
     </div>
@@ -126,7 +126,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
      whileHover={{ x: 2 }}
      onClick={() => openChat(chat.id)}
      className={`w-full text-left px-4 py-3.5 flex items-center gap-3 transition-all cursor-pointer border-b border-gray-50 relative ${
-      isActive ? 'bg-purple-50/60' : 'hover:bg-gray-50/80'
+      isActive ? 'bg-gray-50' : 'hover:bg-gray-50'
      }`}
      >
      {isActive && (
@@ -176,13 +176,13 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
 
   {/* ── Right: thread ── */}
   {selectedChat ? (
-   <div className={`flex-1 flex flex-col min-w-0 bg-gradient-to-br from-white to-gray-50/50 ${mobileShowThread ? 'flex' : 'hidden sm:flex'}`}>
+   <div className={`flex-1 flex flex-col min-w-0 bg-white ${mobileShowThread ? 'flex' : 'hidden sm:flex'}`}>
 
    {/* Thread header */}
-   <div className="px-5 py-3.5 border-b border-gray-50 flex items-center gap-3 bg-white/80 backdrop-blur-xl">
+   <div className="px-5 py-3.5 border-b border-gray-200 flex items-center gap-3 bg-white">
     <button
     onClick={() => setMobileShowThread(false)}
-    className="sm:hidden p-1.5 rounded-lg hover:bg-purple-50 cursor-pointer mr-1"
+    className="sm:hidden p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer mr-1"
     >
     <ChevronLeft size={18} className="text-gray-600" />
     </button>
@@ -195,7 +195,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
     <img
      src={selectedChat.agentAvatar}
      alt={selectedChat.agentName}
-     className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-purple-100"
+     className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-gray-200"
      referrerPolicy="no-referrer"
     />
     )}
@@ -207,7 +207,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
     </div>
 
     {/* Listing chip */}
-    <div className="hidden md:flex items-center gap-2 bg-purple-50 border border-purple-100 rounded-xl px-3 py-1.5 max-w-xs">
+    <div className="hidden md:flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 max-w-xs">
     <Home size={12} className="text-ss-primary shrink-0" />
     <span className="text-xs text-gray-600 font-medium truncate">{selectedChat.listingTitle}</span>
     </div>
@@ -229,14 +229,14 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
       <img
       src={selectedChat.agentAvatar}
       alt=""
-      className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 ring-2 ring-purple-100"
+      className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 ring-2 ring-gray-200"
       referrerPolicy="no-referrer"
       />
      )}
      <div
       className={`max-w-[72%] px-4 py-2.5 rounded-[20px] text-sm leading-relaxed ${
       isUser
-       ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white rounded-tr-[6px] shadow-md shadow-purple-500/10'
+       ? 'bg-ss-primary text-white rounded-tr-[6px] shadow-sm'
        : 'bg-white text-gray-800 border border-gray-100 rounded-tl-[6px] shadow-sm'
       }`}
      >
@@ -258,7 +258,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
     {/* Typing indicator */}
     {isTyping && (
     <div className="flex items-end gap-2">
-     <img src={selectedChat.agentAvatar} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 ring-2 ring-purple-100" referrerPolicy="no-referrer" />
+     <img src={selectedChat.agentAvatar} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 ring-2 ring-gray-200" referrerPolicy="no-referrer" />
      <TypingIndicator color="gray" size="md" />
     </div>
     )}
@@ -270,7 +270,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
     <div className="shrink-0 px-5 py-2 bg-white border-t border-gray-50">
     <div className="flex items-center gap-3">
      <div className="relative">
-     <img src={pendingImage} alt="Preview" className="h-14 rounded-xl object-cover border border-purple-200" />
+     <img src={pendingImage} alt="Preview" className="h-14 rounded-xl object-cover border border-gray-200" />
      <button
       onClick={() => setPendingImage(null)}
       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-700 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors cursor-pointer"
@@ -285,13 +285,13 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
 
    {/* Input bar — hide for booking confirmations */}
    {selectedChat.type === 'booking' ? (
-    <div className="px-4 py-3 border-t border-gray-50 bg-blue-50/60 text-center backdrop-blur-sm">
+    <div className="px-4 py-3 border-t border-gray-50 bg-blue-50 text-center">
     <p className="text-[12px] text-blue-600 font-semibold">📧 დასტური გაიგზავნა თქვენს ელ-ფოსტაზე</p>
     </div>
    ) : (
     <form
     onSubmit={handleSendMessage}
-    className="px-4 py-3.5 border-t border-gray-50 bg-white/80 backdrop-blur-xl flex items-center gap-3"
+    className="px-4 py-3.5 border-t border-gray-200 bg-white flex items-center gap-3"
     >
     <button
      type="button"
@@ -309,7 +309,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
      };
      input.click();
      }}
-     className="p-2.5 rounded-full hover:bg-purple-50 text-gray-400 hover:text-purple-500 transition-colors cursor-pointer shrink-0"
+     className="p-2.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-ss-primary transition-colors cursor-pointer shrink-0"
      title="სურათის ატვირთვა"
     >
      <ImageIcon size={20} />
@@ -319,7 +319,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
      value={replyText}
      onChange={(e) => setReplyText(e.target.value)}
      placeholder="ჩაწერეთ შეტყობინება..."
-     className="flex-1 bg-gray-50 rounded-2xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 border border-gray-100 outline-none focus:ring-2 focus:ring-purple-100 focus:bg-white transition-all"
+     className="flex-1 bg-gray-50 rounded-2xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 border border-gray-100 outline-none focus:ring-2 focus:ring-ss-primary/20 focus:bg-white transition-all"
     />
     <motion.button
      type="submit"
@@ -327,7 +327,7 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
      whileTap={{ scale: 0.92 }}
      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
      (replyText.trim() || pendingImage)
-      ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white shadow-md shadow-purple-500/15'
+      ? 'bg-ss-primary text-white shadow-sm'
       : 'bg-gray-100 text-gray-300'
      }`}
     >
@@ -338,11 +338,8 @@ export default function MessagesDrawer({ chats, setChats, activeChatId, setActiv
    </div>
   ) : (
    <div className="flex-1 hidden sm:flex flex-col items-center justify-center text-gray-400 gap-4">
-   <div className="relative">
-    <div className="absolute inset-0 bg-purple-200 rounded-2xl blur-2xl opacity-30" />
-    <div className="relative w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center">
-    <MessageSquare size={28} className="text-purple-300" />
-    </div>
+   <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center">
+    <MessageSquare size={28} className="text-gray-400" />
    </div>
    <p className="text-sm font-medium">საუბარი ასარჩევად დააწკაპუნეთ</p>
    </div>

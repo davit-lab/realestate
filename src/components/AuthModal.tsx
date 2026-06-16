@@ -129,7 +129,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-xl border border-white/25 flex items-center justify-center">
     <Building2 size={18} className="text-white" />
     </div>
-    <span className="text-white font-black text-[18px] tracking-tight">adjarahome</span>
+    <span className="text-white font-black text-[18px] tracking-tight">newlife</span>
    </div>
    </div>
 

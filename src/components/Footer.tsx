@@ -118,7 +118,7 @@ export default function Footer({ onTermsClick, onPrivacyClick, onHelpClick }: Fo
     </svg>
     </div>
     <span className="text-[15px] font-black text-white tracking-tight">
-    adjara<span className="text-ss-primary">home</span>
+    newlife
     </span>
    </div>
    <p className="text-gray-500 text-[13px] leading-relaxed max-w-sm">
@@ -131,9 +131,9 @@ export default function Footer({ onTermsClick, onPrivacyClick, onHelpClick }: Fo
     <Phone size={13} className="text-gray-600" />
     +995 (32) 2-11-11-11
     </a>
-    <a href="mailto:info@adjarahome.ge" className="flex items-center gap-2 text-gray-500 hover:text-white text-[13px] transition-colors">
+    <a href="mailto:info@newlife.ge" className="flex items-center gap-2 text-gray-500 hover:text-white text-[13px] transition-colors">
     <Mail size={13} className="text-gray-600" />
-    info@adjarahome.ge
+    info@newlife.ge
     </a>
     <div className="flex items-center gap-2 text-gray-500 text-[13px]">
     <MapPin size={13} className="text-gray-600" />
@@ -241,7 +241,7 @@ export default function Footer({ onTermsClick, onPrivacyClick, onHelpClick }: Fo
   <div className="border-t border-gray-800">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
    <p className="text-gray-600 text-[11px]">
-   © {currentYear} Adjarahome.ge — ყველა უფლება დაცულია.
+   © {currentYear} Newlife.ge — ყველა უფლება დაცულია.
    </p>
    <div className="flex items-center gap-4 text-gray-600 text-[11px]">
    <button onClick={onTermsClick} className="hover:text-gray-400 transition-colors cursor-pointer">წესები და პირობები</button>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageCircle, X, ChevronRight, ChevronDown, ChevronUp, Send, Loader2, CheckCircle2, ArrowLeft, Ticket, BookOpen, Clock, User as UserIcon, Bot, Sparkles } from 'lucide-react';
+import { MessageCircle, X, ChevronRight, ChevronDown, ChevronUp, Send, Loader2, CheckCircle2, ArrowLeft, Ticket, BookOpen, Clock, User as UserIcon, Bot, Headphones } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -77,7 +77,7 @@ export default function HelpWidget() {
 
  // Chat state
  const [msgs, setMsgs] = useState<ChatMsg[]>([
- { id: 'b0', text: 'გამარჯობა! 👋 adjarahome.ge-ს მხარდაჭერაში მოგესალმებით. როგორ შეგვიძლია დაგეხმაროთ?', from: 'support', time: 'ახლა' },
+ { id: 'b0', text: 'გამარჯობა! 👋 newlife.ge-ს მხარდაჭერაში მოგესალმებით. როგორ შეგვიძლია დაგეხმაროთ?', from: 'support', time: 'ახლა' },
  ]);
  const [input, setInput] = useState('');
  const [sending, setSending] = useState(false);
@@ -97,7 +97,92 @@ export default function HelpWidget() {
  // FAQ accordion
  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+ // Support chat — Supabase integration
+ const [supportConvId, setSupportConvId] = useState<string | null>(null);
+
  useEffect(() => { if (open) { setView('home'); setUnread(0); } }, [open]);
+
+ // Find or create support conversation when entering chat view
+ const ensureSupportConv = useCallback(async () => {
+  if (!isSupabaseConfigured || !user?.id || supportConvId) return;
+  const { data: existing } = await supabase
+   .from('conversations')
+   .select('id')
+   .eq('buyer_id', user.id)
+   .is('listing_id', null)
+   .order('created_at', { ascending: false })
+   .limit(1);
+  if (existing && existing.length > 0) {
+   setSupportConvId(existing[0].id);
+   return;
+  }
+  const { data: created } = await supabase
+   .from('conversations')
+   .insert({ buyer_id: user.id, title: 'სუპორტი', agent_id: null })
+   .select()
+   .single();
+  if (created) setSupportConvId(created.id);
+ }, [user?.id, supportConvId]);
+
+ useEffect(() => {
+  if (view === 'chat') ensureSupportConv();
+ }, [view, ensureSupportConv]);
+
+ // Load admin replies from Supabase
+ const loadRemoteMessages = useCallback(async () => {
+  if (!isSupabaseConfigured || !supportConvId || !user?.id) return;
+  const { data } = await supabase
+   .from('messages')
+   .select('*')
+   .eq('chat_id', supportConvId)
+   .order('created_at', { ascending: true });
+  if (!data) return;
+  const adminMsgs: ChatMsg[] = data
+   .filter((m: any) => m.sender_id !== user.id)
+   .map((m: any) => ({
+    id: m.id,
+    text: m.content,
+    from: 'support' as const,
+    time: new Date(m.created_at).toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' }),
+   }));
+  setMsgs(prev => {
+   const existingIds = new Set(prev.map(p => p.id));
+   const newMsgs = adminMsgs.filter(m => !existingIds.has(m.id));
+   if (newMsgs.length === 0) return prev;
+   return [...prev, ...newMsgs];
+  });
+ }, [supportConvId, user?.id]);
+
+ useEffect(() => {
+  if (supportConvId) loadRemoteMessages();
+ }, [supportConvId, loadRemoteMessages]);
+
+ // Realtime subscription for admin replies
+ useEffect(() => {
+  if (!supportConvId || !isSupabaseConfigured) return;
+  const channel = supabase
+   .channel(`support-chat:${supportConvId}`)
+   .on('postgres_changes', {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'messages',
+    filter: `chat_id=eq.${supportConvId}`,
+   }, (payload) => {
+    const newMsg = payload.new as any;
+    if (newMsg.sender_id === user?.id) return;
+    setMsgs(prev => {
+     if (prev.some(m => m.id === newMsg.id)) return prev;
+     return [...prev, {
+      id: newMsg.id,
+      text: newMsg.content,
+      from: 'support' as const,
+      time: new Date(newMsg.created_at).toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' }),
+     }];
+    });
+   })
+   .subscribe();
+  return () => { supabase.removeChannel(channel); };
+ }, [supportConvId, user?.id]);
  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, sending]);
 
  useEffect(() => {
@@ -118,10 +203,21 @@ export default function HelpWidget() {
  setSending(true);
 
  const userMsg: ChatMsg = {
-  id: `u-${Date.now()}`, text, from: 'user',
+  id: `local-${Date.now()}`, text, from: 'user',
   time: new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' }),
  };
  setMsgs(prev => [...prev, userMsg]);
+
+ // Persist to Supabase if authenticated and conversation exists
+ if (isSupabaseConfigured && user?.id && supportConvId) {
+  const { error } = await supabase.from('messages').insert({
+   chat_id: supportConvId,
+   sender_id: user.id,
+   content: text,
+   status: 'sent',
+  });
+  if (error) console.error('[HelpWidget] message insert error:', error.message);
+ }
 
  setTimeout(() => {
   const reply = getBotReply(text);
@@ -158,7 +254,7 @@ export default function HelpWidget() {
  };
 
  const Header = ({ title, sub }: { title: string; sub?: string }) => (
- <div className="bg-gradient-to-r from-ss-primary to-ss-primary-dark px-5 py-4 flex items-center gap-3 shrink-0">
+ <div className="bg-ss-primary px-5 py-4 flex items-center gap-3 shrink-0">
   {view !== 'home' && (
   <button onClick={() => setView('home')} className="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-white cursor-pointer transition-colors shrink-0">
    <ArrowLeft size={16} />
@@ -166,9 +262,9 @@ export default function HelpWidget() {
   )}
   <div className="flex-1 min-w-0">
   <p className="text-white font-bold text-[14px] leading-tight">{title}</p>
-  {sub && <p className="text-purple-200 text-[11px] mt-0.5">{sub}</p>}
+  {sub && <p className="text-white/70 text-[11px] mt-0.5">{sub}</p>}
   </div>
-  <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-purple-200 hover:text-white cursor-pointer transition-colors shrink-0">
+  <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-white/70 hover:text-white cursor-pointer transition-colors shrink-0">
   <X size={16} />
   </button>
  </div>
@@ -186,12 +282,10 @@ export default function HelpWidget() {
      </motion.span>
     )}
    </AnimatePresence>
-   <motion.button data-chat-trigger onClick={() => setOpen(v => !v)} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.92 }}
-    className={`relative w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center cursor-pointer transition-colors overflow-hidden ${
+   <motion.button data-chat-trigger onClick={() => setOpen(v => !v)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.94 }}
+    className={`relative w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center cursor-pointer transition-colors overflow-hidden ${
      open ? 'bg-gray-900 text-white' : 'bg-ss-primary text-white'
-    }`}
-    style={open ? undefined : { boxShadow: '0 8px 32px rgba(124,58,237,0.35), 0 2px 8px rgba(124,58,237,0.2)' }}>
-    {!open && <span className="absolute inset-0 rounded-2xl animate-ping bg-ss-primary opacity-15" />}
+    }`}>
     <motion.div key={open ? 'close' : 'open'} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} transition={{ duration: 0.2 }}>
      {open ? <X size={22} /> : <MessageCircle size={24} />}
     </motion.div>
@@ -206,31 +300,27 @@ export default function HelpWidget() {
    animate={{ opacity: 1, y: 0, scale: 1 }}
    exit={{ opacity: 0, y: 20, scale: 0.95 }}
    transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-   className="fixed bottom-20 left-4 right-4 sm:left-auto sm:bottom-24 sm:right-6 z-[100] sm:w-[400px] bg-white/95 backdrop-blur-2xl rounded-[28px] shadow-2xl shadow-black/8 border border-white/60 overflow-hidden flex flex-col"
+   className="fixed bottom-20 left-4 right-4 sm:left-auto sm:bottom-24 sm:right-6 z-[100] sm:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col"
    style={{ maxHeight: 'min(680px, calc(100vh - 7rem))' }}
    >
 
    {/* ─── HOME ─── */}
    {view === 'home' && (
    <>
-    <div className="relative shrink-0 overflow-hidden">
-     <div className="absolute inset-0 bg-gradient-to-br from-ss-primary via-ss-primary-dark to-[#4C1D95]" />
-     <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)' }} />
-     <div className="relative px-6 pt-7 pb-10">
-      <div className="flex items-center justify-between mb-5">
+    <div className="shrink-0 bg-ss-primary px-6 pt-6 pb-10">
+      <div className="flex items-center justify-between mb-4">
        <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 bg-white/15 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10">
-         <Sparkles size={17} className="text-white" />
+        <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+         <Headphones size={17} className="text-white" />
         </div>
-        <span className="text-white font-bold text-[13px] tracking-wide">adjarahome.ge</span>
+        <span className="text-white font-bold text-[13px] tracking-wide">newlife.ge</span>
        </div>
-       <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
+       <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
         <X size={16} />
        </button>
       </div>
       <h2 className="text-white font-bold text-[22px] leading-tight">გამარჯობა! 👋</h2>
-      <p className="text-purple-200/90 text-[13px] mt-1.5 font-medium">როგორ შეგვიძლია დაგეხმაროთ დღეს?</p>
-     </div>
+      <p className="text-white/70 text-[13px] mt-1.5 font-medium">როგორ შეგვიძლია დაგეხმაროთ დღეს?</p>
     </div>
 
     <div className="flex-1 overflow-y-auto px-4 -mt-6 pb-4 space-y-3">
@@ -238,7 +328,7 @@ export default function HelpWidget() {
      {
      view: 'chat' as View,
      icon: <Bot size={20} className="text-white" />,
-     bg: 'bg-gradient-to-br from-ss-primary to-ss-primary-dark',
+     bg: 'bg-ss-primary',
      title: 'Live ჩატი',
      sub: 'ოპერატორი პასუხობს 10 წთ-ში',
      badge: (
@@ -269,7 +359,7 @@ export default function HelpWidget() {
      whileHover={{ scale: 1.015, y: -1 }}
      whileTap={{ scale: 0.985 }}
      onClick={() => setView(item.view)}
-     className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3.5 hover:border-purple-200 hover:shadow-lg hover:shadow-purple-500/5 transition-all cursor-pointer text-left shadow-sm"
+     className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3.5 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer text-left shadow-sm"
      >
      <div className={`w-11 h-11 ${item.bg} rounded-xl flex items-center justify-center shrink-0 shadow-sm`}>
       {item.icon}
@@ -290,7 +380,7 @@ export default function HelpWidget() {
      <div className="flex flex-wrap gap-2">
       {SMART_SUGGESTIONS.map(s => (
        <motion.button key={s} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => { setView('chat'); setInput(s); }}
-        className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-100 hover:bg-purple-50 hover:text-ss-primary hover:border-purple-200 transition-all cursor-pointer">
+        className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-100 hover:bg-purple-50 hover:text-ss-primary hover:border-purple-100 transition-all cursor-pointer">
         {s}
        </motion.button>
       ))}
@@ -309,7 +399,7 @@ export default function HelpWidget() {
    {view === 'chat' && (
    <>
     <Header title="Customer Service ჩატი" sub="ოპერატორი მალე დაგიკავშირდება" />
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-white to-gray-50/50">
+    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gray-50">
     {msgs.map((msg, i) => (
      <motion.div
      key={msg.id}
@@ -319,20 +409,20 @@ export default function HelpWidget() {
      className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} gap-2`}
      >
      {msg.from === 'support' && (
-      <div className="w-7 h-7 bg-gradient-to-br from-ss-primary to-ss-primary-dark rounded-full flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-7 h-7 bg-ss-primary rounded-full flex items-center justify-center shrink-0 mt-0.5">
       <Bot size={14} className="text-white" />
       </div>
      )}
      <div className={`max-w-[78%] rounded-[20px] px-3.5 py-2.5 text-[13px] leading-relaxed ${
       msg.from === 'user'
-      ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white rounded-tr-[6px] shadow-md shadow-purple-500/10'
+      ? 'bg-ss-primary text-white rounded-tr-[6px] shadow-sm'
       : 'bg-white border border-gray-100 text-gray-800 rounded-tl-[6px] shadow-sm'
      }`}>
       <p>{msg.text}</p>
-      <p className={`text-[10px] mt-1 ${msg.from === 'user' ? 'text-purple-200' : 'text-gray-400'}`}>{msg.time}</p>
+      <p className={`text-[10px] mt-1 ${msg.from === 'user' ? 'text-white/70' : 'text-gray-400'}`}>{msg.time}</p>
      </div>
      {msg.from === 'user' && (
-      <div className="w-7 h-7 bg-gradient-to-br from-ss-primary to-ss-primary-dark rounded-full flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-7 h-7 bg-ss-primary rounded-full flex items-center justify-center shrink-0 mt-0.5">
       <UserIcon size={13} className="text-white" />
       </div>
      )}
@@ -340,7 +430,7 @@ export default function HelpWidget() {
     ))}
     {sending && (
      <div className="flex items-center gap-2">
-     <div className="w-7 h-7 bg-gradient-to-br from-ss-primary to-ss-primary-dark rounded-full flex items-center justify-center shrink-0">
+     <div className="w-7 h-7 bg-ss-primary rounded-full flex items-center justify-center shrink-0">
       <Bot size={14} className="text-white" />
      </div>
      <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-[6px] px-4 py-3 shadow-sm flex items-center gap-1">
@@ -353,7 +443,7 @@ export default function HelpWidget() {
     <div ref={bottomRef} />
     </div>
     <div className="px-4 py-3.5 border-t border-gray-50 bg-white shrink-0">
-    <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-[22px] px-3 py-2.5 focus-within:bg-white focus-within:border-purple-200 focus-within:shadow-sm transition-all">
+    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-[22px] px-3 py-2.5 focus-within:bg-white focus-within:border-ss-primary transition-all">
      <input
      type="text"
      value={input}
@@ -368,7 +458,7 @@ export default function HelpWidget() {
      whileTap={{ scale: 0.9 }}
      className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
       input.trim() && !sending
-      ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white shadow-md shadow-purple-500/15'
+      ? 'bg-ss-primary text-white shadow-sm'
       : 'bg-gray-100 text-gray-300'
      }`}
      >
@@ -398,7 +488,7 @@ export default function HelpWidget() {
      <motion.button
       whileTap={{ scale: 0.95 }}
       onClick={() => { setTSent(false); setView('home'); }}
-      className="mt-2 bg-gradient-to-r from-ss-primary to-ss-primary-dark text-white font-bold px-6 py-2.5 rounded-xl text-[12px] cursor-pointer hover:opacity-90 transition-opacity shadow-md shadow-purple-500/15"
+      className="mt-2 bg-ss-primary hover:bg-ss-primary-dark text-white font-bold px-6 py-2.5 rounded-xl text-[12px] cursor-pointer transition-colors shadow-sm"
      >
       მთავარი
      </motion.button>
@@ -437,7 +527,7 @@ export default function HelpWidget() {
      </div>
      {tError && <p className="text-rose-600 text-[11px] font-medium bg-rose-50 rounded-xl px-3 py-2">{tError}</p>}
      <motion.button type="submit" disabled={tSending} whileTap={{ scale: 0.98 }}
-      className="w-full bg-gradient-to-r from-ss-primary to-ss-primary-dark text-white font-bold py-3 rounded-2xl text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-60 shadow-md shadow-purple-500/10">
+      className="w-full bg-ss-primary hover:bg-ss-primary-dark text-white font-bold py-3 rounded-2xl text-[13px] flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-60 shadow-sm">
       {tSending ? <Loader2 size={15} className="animate-spin" /> : <Send size={14} />}
       {tSending ? 'იგზავნება...' : 'ტიკეტის გაგზავნა'}
      </motion.button>

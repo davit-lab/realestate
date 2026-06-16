@@ -38,15 +38,13 @@ export default function ChatMessageBubble({
  const failed = message.status === 'failed';
 
  const bubbleClasses = {
- user: 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white rounded-[22px] rounded-tr-[8px]',
+ user: 'bg-ss-primary text-white rounded-[22px] rounded-tr-[8px]',
  agent: 'bg-white text-gray-800 rounded-[22px] rounded-tl-[8px] shadow-sm border border-gray-100',
  ai: 'bg-white text-gray-700 rounded-[22px] rounded-tl-[8px] shadow-sm border border-gray-100',
  };
 
  const accentBar = variant !== 'user' && (
- <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${
-  variant === 'ai' ? 'bg-violet-400' : 'bg-purple-400'
- }`} />
+ <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-ss-primary/30" />
  );
 
  return (
@@ -88,7 +86,7 @@ export default function ChatMessageBubble({
    >
    <span
     className={`text-[10px] font-medium ${
-    variant === 'user' ? 'text-purple-200' : 'text-gray-400'
+    variant === 'user' ? 'text-white/70' : 'text-gray-400'
     }`}
    >
     {formatTime(message.created_at)}
@@ -97,10 +95,10 @@ export default function ChatMessageBubble({
    {isOwn && (
     <span className="flex items-center">
     {message.status === 'pending' && (
-     <Check size={11} className="text-purple-200" />
+     <Check size={11} className="text-white/70" />
     )}
     {message.status === 'sent' && (
-     <CheckCheck size={11} className="text-purple-200" />
+     <CheckCheck size={11} className="text-white/70" />
     )}
     {failed && (
      <AlertTriangle size={11} className="text-amber-300" />
@@ -114,7 +112,7 @@ export default function ChatMessageBubble({
   {failed && isOwn && onRetry && (
    <button
    onClick={() => onRetry(message)}
-   className="absolute -right-9 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-white shadow-sm hover:bg-purple-50 border border-gray-100 transition-colors cursor-pointer"
+   className="absolute -right-9 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-white shadow-sm hover:bg-gray-50 border border-gray-100 transition-colors cursor-pointer"
    title="ხელახლა გაგზავნა"
    >
    <RotateCcw size={12} className="text-gray-500" />

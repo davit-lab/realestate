@@ -19,7 +19,7 @@ import {
  ArrowLeft,
  Share2,
  CheckCircle,
- Eye
+ Eye,
 } from 'lucide-react';
 import { Listing } from '../types';
 
@@ -240,6 +240,63 @@ export default function ListingDetail({
    </div>
    </div>
 
+   {/* Detailed fields — shown for apartment/house/cottage */}
+   {listing.property_type && ['apartment', 'house', 'cottage'].includes(listing.property_type) && (
+    (listing.kitchen_area_sqm || listing.floor_type || listing.balconies != null || listing.bathrooms != null || listing.building_type || listing.building_condition || (listing.additional_info && listing.additional_info.length > 0)) ? (
+   <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+    <h4 className="font-semibold text-sm text-gray-900 mb-4 border-b border-gray-100 pb-3">დეტალური ინფორმაცია</h4>
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+     {listing.kitchen_area_sqm != null && (
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+       <div className="text-xs text-gray-400 mb-1">სამზარეულოს ფართი</div>
+       <div className="text-sm font-semibold text-gray-900">{listing.kitchen_area_sqm} მ²</div>
+      </div>
+     )}
+     {listing.floor_type && (
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+       <div className="text-xs text-gray-400 mb-1">სართულის ტიპი</div>
+       <div className="text-sm font-semibold text-gray-900">{listing.floor_type}</div>
+      </div>
+     )}
+     {listing.balconies != null && (
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+       <div className="text-xs text-gray-400 mb-1">აივანი / ლოჯია</div>
+       <div className="text-sm font-semibold text-gray-900">{listing.balconies === 0 ? 'არ აქვს' : listing.balconies}</div>
+      </div>
+     )}
+     {listing.bathrooms != null && (
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+       <div className="text-xs text-gray-400 mb-1">სველი წერტილი</div>
+       <div className="text-sm font-semibold text-gray-900">{listing.bathrooms === 0 ? 'არ აქვს' : listing.bathrooms}</div>
+      </div>
+     )}
+     {listing.building_type && (
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+       <div className="text-xs text-gray-400 mb-1">პროექტი</div>
+       <div className="text-sm font-semibold text-gray-900">{listing.building_type}</div>
+      </div>
+     )}
+     {listing.building_condition && (
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+       <div className="text-xs text-gray-400 mb-1">მდგომარეობა</div>
+       <div className="text-sm font-semibold text-gray-900">{listing.building_condition}</div>
+      </div>
+     )}
+    </div>
+    {listing.additional_info && listing.additional_info.length > 0 && (
+     <div className="mt-3 pt-3 border-t border-gray-100">
+      <p className="text-xs text-gray-400 mb-2">სხვა ინფორმაცია</p>
+      <div className="flex flex-wrap gap-1.5">
+       {listing.additional_info.map((tag) => (
+        <span key={tag} className="bg-violet-50 text-violet-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-violet-100">{tag}</span>
+       ))}
+      </div>
+     </div>
+    )}
+   </div>
+   ) : null
+   )}
+
    <ListingMap listing={listing} currency={currency} />
 
    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm" id="comment-box-block">
@@ -301,41 +358,53 @@ export default function ListingDetail({
 
   {/* RIGHT COLUMN */}
   <div className="lg:col-span-4 space-y-4">
-   <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm" id="price-card-box">
-   <h1 className="text-base font-bold text-gray-900 leading-snug mb-4">{listing.title}</h1>
-   <div className="flex items-baseline gap-2 mb-1">
-    <span className="text-3xl font-black text-gray-900 leading-none">{formattedPrice}</span>
-    <span className="text-xl font-bold text-ss-primary">{currencySymbol}</span>
-   </div>
-   <div className="text-sm text-gray-500 mb-4">{estimationText} · {listing.area} მ²</div>
-   <div className="flex items-center gap-2 flex-wrap mb-3">
-    <span className="bg-violet-100 text-ss-primary text-xs font-semibold px-2.5 py-1 rounded-xl">
-    {listing.type === 'sale' ? 'იყიდება' : listing.type === 'rent' ? 'ქირავდება' : listing.type === 'mortgage' ? 'იპოთეკა' : 'გირაო'}
-    </span>
-    {listing.vipStatus !== 'standard' && (
-     <span className={`text-xs font-bold px-2.5 py-1 rounded-xl ${
-      listing.vipStatus === 'premium' ? 'bg-amber-600 text-white' :
-      listing.vipStatus === 'super' ? 'bg-emerald-600 text-white' :
-      'bg-slate-500 text-white'
-     }`}>
-      {listing.vipStatus === 'premium' ? 'PREMIUM' : listing.vipStatus === 'super' ? 'SUPER' : 'BASIC'}
+   <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm" id="price-card-box">
+   {/* Clean price header */}
+   <div className="p-5 border-b border-gray-100">
+    <p className="text-[12px] text-gray-400 font-medium mb-2 line-clamp-1">{listing.title}</p>
+    <div className="flex items-baseline gap-2 mb-3">
+     <span className="text-[34px] font-black leading-none tracking-tight text-gray-900">{formattedPrice}</span>
+     <span className="text-xl font-bold text-gray-500">{currencySymbol}</span>
+    </div>
+    <div className="flex items-center gap-2">
+     <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-1 rounded-lg">
+      {estimationText}
      </span>
-    )}
-    <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-xl flex items-center gap-1">
-    <Sparkles size={10} />
-    {listing.priceLevel === 'cheap' || listing.priceLevel === 'low' ? 'კარგი ფასი' : listing.priceLevel === 'average' ? 'საბაზრო ფასი' : 'პრემიუმ ფასი'}
-    </span>
+     <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-1 rounded-lg">
+      {listing.area} მ²
+     </span>
+    </div>
    </div>
-   <div className="flex items-center gap-1.5 text-xs text-gray-500">
-    <Eye size={12} />
-    <span>{listing.viewCount || 0} ნახვა</span>
+   <div className="p-5">
+    <div className="flex items-center gap-2 flex-wrap mb-3">
+     <span className="bg-purple-50 text-ss-primary text-xs font-semibold px-2.5 py-1 rounded-xl border border-purple-100">
+     {listing.type === 'sale' ? 'იყიდება' : listing.type === 'rent' ? 'ქირავდება' : listing.type === 'mortgage' ? 'იპოთეკა' : 'გირაო'}
+     </span>
+     {listing.vipStatus !== 'standard' && (
+      <span className={`text-xs font-bold px-2.5 py-1 rounded-xl ${
+       listing.vipStatus === 'premium' ? 'bg-amber-600 text-white' :
+       listing.vipStatus === 'super' ? 'bg-emerald-600 text-white' :
+       'bg-slate-500 text-white'
+      }`}>
+       {listing.vipStatus === 'premium' ? 'PREMIUM' : listing.vipStatus === 'super' ? 'SUPER' : 'BASIC'}
+      </span>
+     )}
+     <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-xl flex items-center gap-1 border border-emerald-100">
+     <Sparkles size={10} />
+     {listing.priceLevel === 'cheap' || listing.priceLevel === 'low' ? 'კარგი ფასი' : listing.priceLevel === 'average' ? 'საბაზრო ფასი' : 'პრემიუმ ფასი'}
+     </span>
+    </div>
+    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+     <Eye size={12} />
+     <span>{listing.viewCount || 0} ნახვა</span>
+    </div>
    </div>
    </div>
 
    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm" id="phone-revealer-card">
    <p className="text-xs text-gray-500 mb-3">გამყიდველთან დასაკავშირებლად:</p>
    <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 mb-3">
-    <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+    <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
     <Phone size={15} className="text-ss-primary" />
     </div>
     <span className="text-lg font-black text-gray-900 font-mono tracking-wide">
@@ -358,18 +427,18 @@ export default function ListingDetail({
 
    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm" id="agent-profile-card">
    <div className="flex items-center gap-3 mb-4">
-    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 ring-2 ring-violet-200 shrink-0">
+    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 ring-2 ring-gray-200 shrink-0">
     <img src={listing.author.avatar} alt={listing.author.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
     </div>
     <div>
     <h5 className="font-semibold text-gray-900 text-sm">{listing.author.name}</h5>
-    <span className="inline-flex items-center gap-1 bg-violet-100 text-ss-primary text-xs font-medium px-2 py-0.5 rounded-xl mt-0.5">
+    <span className="inline-flex items-center gap-1 bg-purple-50 text-ss-primary text-xs font-medium px-2 py-0.5 rounded-xl mt-0.5">
      <User size={10} />აგენტი
     </span>
     </div>
    </div>
    <button onClick={() => onAgentClick(listing.author.name)}
-    className="w-full border border-gray-200 hover:border-ss-primary text-gray-600 hover:text-ss-primary hover:bg-violet-50 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer">
+    className="w-full border border-gray-200 hover:border-ss-primary text-gray-600 hover:text-ss-primary hover:bg-purple-50 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer">
     ყველა განცხადება ({listing.author.listingCount}+)
    </button>
    </div>

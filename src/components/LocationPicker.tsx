@@ -142,7 +142,7 @@ export default function LocationPicker({ onPick, initialLat, initialLng, initial
     onChange={e => { setQuery(e.target.value); if (!e.target.value) setSuggestions([]); }}
     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchNominatim(); } }}
     placeholder="ეძებეთ მისამართი..."
-    className="w-full bg-white/80 border border-white/80 rounded-xl py-2.5 pl-9 pr-8 text-[13px] text-gray-900 placeholder-gray-400 outline-none focus:bg-white/95 focus:ring-2 focus:ring-violet-200 transition-all"
+    className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-9 pr-8 text-[13px] text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-ss-primary/20 transition-all"
    />
    {query && (
     <button
@@ -173,9 +173,9 @@ export default function LocationPicker({ onPick, initialLat, initialLng, initial
     key={s.place_id}
     type="button"
     onClick={() => handleSelect(s)}
-    className="w-full text-left px-3.5 py-2.5 text-[12px] text-gray-700 hover:bg-violet-50 border-b border-gray-100 last:border-0 flex items-start gap-2 cursor-pointer transition-colors"
+    className="w-full text-left px-3.5 py-2.5 text-[12px] text-gray-700 hover:bg-gray-50 border-b border-gray-100 last:border-0 flex items-start gap-2 cursor-pointer transition-colors"
     >
-    <MapPin size={11} className="text-violet-500 mt-0.5 shrink-0" />
+    <MapPin size={11} className="text-ss-primary mt-0.5 shrink-0" />
     <span className="line-clamp-2 leading-relaxed">{s.display_name}</span>
     </button>
    ))}
@@ -212,11 +212,11 @@ export default function LocationPicker({ onPick, initialLat, initialLng, initial
   <div className={`flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[12px] transition-all ${
    reverseLoading
    ? 'bg-gray-50 border border-gray-200 text-gray-500'
-   : 'bg-violet-50 border border-violet-200 text-violet-800'
+   : 'bg-purple-50 border border-purple-200 text-ss-primary'
   }`}>
    {reverseLoading
    ? <Loader2 size={13} className="animate-spin shrink-0 mt-0.5 text-gray-400" />
-   : <CheckCircle size={13} className="shrink-0 mt-0.5 text-violet-500" />
+   : <CheckCircle size={13} className="shrink-0 mt-0.5 text-ss-primary" />
    }
    <span className="font-medium leading-relaxed">
    {reverseLoading ? 'მისამართი იძებნება...' : pickedAddress || `${marker[0].toFixed(5)}, ${marker[1].toFixed(5)}`}

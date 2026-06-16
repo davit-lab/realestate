@@ -40,6 +40,14 @@ function mapRow(row: any): Listing {
     lng: row.lng != null ? Number(row.lng) : undefined,
     user_id: row.user_id ?? undefined,
     property_type: row.property_type || undefined,
+    kitchen_area_sqm: row.kitchen_area_sqm != null ? Number(row.kitchen_area_sqm) : undefined,
+    floor_type: row.floor_type || undefined,
+    balconies: row.balconies != null ? Number(row.balconies) : undefined,
+    bathrooms: row.bathrooms != null ? Number(row.bathrooms) : undefined,
+    building_status: row.building_status || undefined,
+    building_type: row.building_type || undefined,
+    building_condition: row.building_condition || undefined,
+    additional_info: row.additional_info?.length ? row.additional_info : undefined,
   };
 }
 
@@ -76,5 +84,19 @@ export function useSupabaseListings() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchListings]);
 
-  return { dbListings, loading, refetch: fetchListings };
+  const updateListing = useCallback(async (id: string, payload: Partial<Record<string, unknown>>) => {
+    if (!isSupabaseConfigured) return { error: 'Supabase not configured' };
+    const { data, error } = await supabase.from('properties').update(payload).eq('id', id).select().single();
+    if (!error) fetchListings();
+    return { data, error: error?.message };
+  }, [fetchListings]);
+
+  const deleteListing = useCallback(async (id: string) => {
+    if (!isSupabaseConfigured) return { error: 'Supabase not configured' };
+    const { error } = await supabase.from('properties').delete().eq('id', id);
+    if (!error) fetchListings();
+    return { error: error?.message };
+  }, [fetchListings]);
+
+  return { dbListings, loading, refetch: fetchListings, updateListing, deleteListing };
 }

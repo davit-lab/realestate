@@ -1,143 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
  Compass, Plane, Train, Music, MapPin, Calendar, Clock, Search,
- Star, ArrowRight, ChevronRight, Ticket, Mountain, Camera, Heart, Tag
+ Star, ArrowRight, ChevronRight, Ticket, Mountain, Camera, Heart, Tag, Loader2
 } from 'lucide-react';
 import { type TourismItem, type TourismCategory } from './TourismDetailModal';
-
-
-export const ITEMS: TourismItem[] = [
- // Attractions
- {
- id: 't-1', category: 'attractions', title: 'ვარძია — კლდეში გამოკვეთილი ქალაქი',
- subtitle: 'XII საუკუნის ისტორიული ძეგლი, სამცხე-ჯავახეთი',
- image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
- city: 'ახალქალაქი', price: 15, currency: '₾', rating: 9.5, reviewCount: 4200,
- tags: ['ისტორია', 'კლდე', 'ეკლესია'], featured: true, badge: '🏛️ UNESCO',
- },
- {
- id: 't-2', category: 'attractions', title: 'სიგნაღი — სიყვარულის ქალაქი',
- subtitle: 'კახეთის ყველაზე ლამაზი ქალაქი ვენახებით',
- image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
- city: 'სიგნაღი', price: 0, currency: '₾', rating: 9.2, reviewCount: 3100,
- tags: ['ღვინო', 'კახეთი', 'სოფელი'], featured: true,
- },
- {
- id: 't-3', category: 'attractions', title: 'გუდაური — მთის კურორტი',
- subtitle: 'კავკასიის საუკეთესო სათხილამურო კომპლექსი',
- image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=800&q=80',
- city: 'გუდაური', price: 80, currency: '₾', rating: 8.9, reviewCount: 2800,
- duration: 'სეზონური', tags: ['თხილამური', 'მთა', 'სპორტი'],
- },
- {
- id: 't-4', category: 'attractions', title: 'ბათუმის ბოტანიკური ბაღი',
- subtitle: 'ზღვის სანაპიროზე გაშლილი 113 ჰა ბოტანიკური ბაღი',
- image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=80',
- city: 'ბათუმი', price: 20, currency: '₾', rating: 8.7, reviewCount: 5600,
- tags: ['ბაღი', 'ბუნება', 'ოჯახი'],
- },
- {
- id: 't-5', category: 'attractions', title: 'ნარიყალა — თბილისის სიმბოლო',
- subtitle: 'IV–XVIII სს. ციხესიმაგრე ქალაქის პანორამით',
- image: 'https://images.unsplash.com/photo-1559494007-9f5847c49d94?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 0, rating: 9.1, reviewCount: 7800,
- tags: ['ციხე', 'ისტორია', 'ხედი'], badge: '🔭 პანორამა',
- },
- {
- id: 't-6', category: 'attractions', title: 'სვანეთი — მყინვარები და კოშკები',
- subtitle: 'ევროპის ყველაზე მაღალმდებარე დასახლებული კუთხე',
- image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80',
- city: 'მესტია', price: 0, rating: 9.6, reviewCount: 1900,
- tags: ['სვანეთი', 'მყინვარი', 'ტრეკი'], featured: true, badge: '🏔️ UNESCO',
- },
- // Flights
- {
- id: 'f-1', category: 'flights', title: 'თბილისი → ბარსელონა',
- subtitle: 'Georgian Airways — პირდაპირი რეისი',
- image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 420, currency: '€', date: '15 ივნ - 22 ივნ',
- duration: '4 სთ 30 წთ', tags: ['პირდაპირი', 'ევროპა'], badge: '✈️ ეკ. კლასი',
- },
- {
- id: 'f-2', category: 'flights', title: 'თბილისი → დუბაი',
- subtitle: 'flydubai — კომფორტული ფრენა',
- image: 'https://images.unsplash.com/photo-1540962351504-03099e0a754b?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 180, currency: '$', date: '20 ივნ - 27 ივნ',
- duration: '3 სთ 45 წთ', tags: ['პირდაპირი', 'ახლო აღმოსავლეთი'],
- },
- {
- id: 'f-3', category: 'flights', title: 'ბათუმი → სტამბოლი',
- subtitle: 'Turkish Airlines — ტრანზიტი გარეშე',
- image: 'https://images.unsplash.com/photo-1508009603885-50cf7c8dd0d5?auto=format&fit=crop&w=800&q=80',
- city: 'ბათუმი', price: 95, currency: '$', date: '10 ივლ - 17 ივლ',
- duration: '1 სთ 15 წთ', tags: ['პირდაპირი', 'სტამბოლი'], badge: '🔥 ხელსაყრელი',
- },
- {
- id: 'f-4', category: 'flights', title: 'თბილისი → პარიზი (CDG)',
- subtitle: 'Wizz Air — ბიუჯეტის ავიაკომპანია',
- image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 310, currency: '€', date: '5 ივლ - 12 ივლ',
- duration: '4 სთ 50 წთ', tags: ['ევროპა', 'ბიუჯეტი'],
- },
- // Trains
- {
- id: 'tr-1', category: 'trains', title: 'თბილისი → ბათუმი (ექსპრესი)',
- subtitle: 'Georgian Railway — კომფორტული სვლა',
- image: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 25, currency: '₾', date: 'ყოველდღე',
- time: '08:00 / 15:00', duration: '5 სთ 30 წთ', tags: ['ექსპრესი', 'კომფორტი'],
- },
- {
- id: 'tr-2', category: 'trains', title: 'თბილისი → ქუთაისი',
- subtitle: 'Georgian Railway — სწრაფი მატარებელი',
- image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 12, currency: '₾', date: 'ყოველდღე',
- time: '10:00 / 17:00', duration: '2 სთ 45 წთ', tags: ['სწრაფი', 'ბიუჯეტი'],
- },
- {
- id: 'tr-3', category: 'trains', title: 'ბათუმი → ოზურგეთი',
- subtitle: 'Georgian Railway — ყოველდღიური',
- image: 'https://images.unsplash.com/photo-1558959804-0d0c5d50b4a2?auto=format&fit=crop&w=800&q=80',
- city: 'ბათუმი', price: 8, currency: '₾', date: 'ყოველდღე',
- time: '09:30', duration: '1 სთ 20 წთ', tags: ['ადგილობრივი'],
- },
- {
- id: 'tr-4', category: 'trains', title: 'თბილისი → ბაქო (საერთ.)',
- subtitle: 'ADY Express — საერთაშორისო მარშრუტი',
- image: 'https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 55, currency: '₾', date: '3 ივნ / 10 ივნ',
- time: '20:00', duration: '12 სთ', tags: ['საერთაშორისო', 'ღამის'], badge: '🌍 საერთ.',
- },
- // Concerts
- {
- id: 'c-1', category: 'concerts', title: 'Dinamo Band — Summer Tour 2025',
- subtitle: 'ბათუმის ამფითეატრი, ღია ცის ქვეშ',
- image: 'https://images.unsplash.com/photo-1540039155733-5bb30b4e0a80?auto=format&fit=crop&w=800&q=80',
- city: 'ბათუმი', price: 60, currency: '₾', date: '18 ივნ 2025',
- time: '21:00', tags: ['როქ', 'ქართული', 'ლაივ'], featured: true, badge: '🎸 სელ-აუთი!',
- },
- {
- id: 'c-2', category: 'concerts', title: 'Black Eyed Peas — Tbilisi Open Air',
- subtitle: 'ლოჩინი სტადიონი, თბილისი',
- image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 120, currency: '₾', date: '25 ივლ 2025',
- time: '20:00', tags: ['პოპი', 'საერთ.', 'სტადიონი'], featured: true,
- },
- {
- id: 'c-3', category: 'concerts', title: 'Tbilisi International Jazz Festival',
- subtitle: 'მეცნიერების სახლი, თბილისი',
- image: 'https://images.unsplash.com/photo-1415886736090-f7c97d1e5b08?auto=format&fit=crop&w=800&q=80',
- city: 'თბილისი', price: 45, currency: '₾', date: '3-5 ივლ 2025',
- tags: ['ჯაზი', 'ფესტივალი'], badge: '🎷 ფესტ.',
- },
- {
- id: 'c-4', category: 'concerts', title: 'Batumi Electronic Night',
- subtitle: 'ბათუმის სეზონური ფესტივალი',
- image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
- city: 'ბათუმი', price: 35, currency: '₾', date: '1 აგვ 2025',
- time: '22:00', tags: ['ელექტრო', 'ნოჩლეფი'],
- },
-];
+import { useServices } from '../hooks/useServices';
 
 const CATEGORY_TABS: { value: TourismCategory; label: string; icon: React.ReactNode }[] = [
  { value: 'all',   label: 'ყველა',  icon: <Compass size={15} /> },
@@ -161,19 +28,22 @@ interface TourismPageProps {
 }
 
 export default function TourismPage({ onSelectItem }: TourismPageProps) {
+ const { tourismItems: dbTourism, loading } = useServices();
  const [category, setCategory] = useState<TourismCategory>('all');
  const [searchQ, setSearchQ] = useState('');
  const [selectedCity, setSelectedCity] = useState('ყველა');
  const [favorites, setFavorites] = useState<string[]>([]);
 
+ const allItems = dbTourism;
+
  const filtered = useMemo(() => {
- return ITEMS.filter(item => {
+ return allItems.filter(item => {
   if (category !== 'all' && item.category !== category) return false;
   if (selectedCity !== 'ყველა' && item.city !== selectedCity) return false;
   if (searchQ && !item.title.toLowerCase().includes(searchQ.toLowerCase()) && !item.city.toLowerCase().includes(searchQ.toLowerCase())) return false;
   return true;
  });
- }, [category, selectedCity, searchQ]);
+ }, [category, selectedCity, searchQ, allItems]);
 
  const toggleFav = (id: string) => setFavorites(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
@@ -240,9 +110,15 @@ export default function TourismPage({ onSelectItem }: TourismPageProps) {
   </div>
 
   <div className="max-w-7xl mx-auto px-4 py-6">
-  {filtered.length === 0 ? (
+  {loading ? (
+   <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
+   <Loader2 size={28} className="animate-spin mx-auto text-gray-300 mb-3" />
+   <p className="text-gray-400 text-sm">იტვირთება...</p>
+   </div>
+  ) : filtered.length === 0 ? (
    <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
    <p className="text-gray-400 text-sm">შედეგი ვერ მოიძებნა</p>
+   <p className="text-gray-300 text-xs mt-1">ადმინ პანელში დაამატეთ ტურისტული ობიექტები</p>
    </div>
   ) : (
    <>

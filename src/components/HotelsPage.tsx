@@ -1,100 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Star, MapPin, Wifi, Car, Coffee, Waves, Dumbbell, UtensilsCrossed, Search, SlidersHorizontal, X, ChevronRight, Heart, Phone } from 'lucide-react';
+import { Star, MapPin, Wifi, Car, Coffee, Waves, Dumbbell, UtensilsCrossed, Search, SlidersHorizontal, X, ChevronRight, Heart, Phone, Loader2 } from 'lucide-react';
 import { type Hotel, type BookingData } from './HotelDetailModal';
+import { useServices } from '../hooks/useServices';
 export { type Hotel };
-
-export const HOTELS: Hotel[] = [
- {
- id: 'h-1', name: 'Radisson Blu Batumi', stars: 5, rating: 9.2, reviewCount: 1843,
- pricePerNight: 320, city: 'ბათუმი', district: 'ცენტრი',
- image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'pool', 'gym', 'restaurant', 'parking', 'breakfast'],
- description: 'ბათუმის ცენტრში მდებარე 5 ვარსკვლავიანი სასტუმრო შავი ზღვის პანორამული ხედით.',
- phone: '0422 27 05 00', tags: ['ლუქსი', 'ზღვის ხედი', 'სპა'], featured: true,
- },
- {
- id: 'h-2', name: 'Sheraton Grand Tbilisi Metechi Palace', stars: 5, rating: 9.0, reviewCount: 2241,
- pricePerNight: 450, city: 'თბილისი', district: 'მეტეხი',
- image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'pool', 'gym', 'restaurant', 'parking', 'breakfast'],
- description: 'მდინარე მტკვრის პირას მდებარე კლასიკური სასტუმრო ძველი თბილისის გარემოში.',
- phone: '032 277 32 00', tags: ['ლუქსი', 'ბიზნეს', 'ისტორიული'], featured: true,
- },
- {
- id: 'h-3', name: 'Cobandere Hotel Batumi', stars: 4, rating: 8.6, reviewCount: 978,
- pricePerNight: 180, city: 'ბათუმი', district: 'ახალი ბულვარი',
- image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'breakfast', 'restaurant', 'parking'],
- description: 'ბათუმის ახალ ბულვართან ახლოს, კომფორტული ოთახებით და კარგი სერვისით.',
- phone: '0422 24 00 00', tags: ['ოჯახი', 'ბიუჯეტი'],
- },
- {
- id: 'h-4', name: 'Kopala Rikhe Hotel', stars: 4, rating: 8.8, reviewCount: 1120,
- pricePerNight: 210, city: 'თბილისი', district: 'ძველი თბილისი',
- image: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'breakfast', 'restaurant', 'gym'],
- description: 'ძველი თბილისის გულში, ბარათაშვილის ხიდთან ახლოს, ქალაქის პანორამული ხედით.',
- phone: '032 224 09 09', tags: ['ძველი თბილისი', 'ხედი', 'რომანტიკა'],
- },
- {
- id: 'h-5', name: 'Piazza Hotel Telavi', stars: 4, rating: 8.4, reviewCount: 567,
- pricePerNight: 150, city: 'თელავი', district: 'ცენტრი',
- image: 'https://images.unsplash.com/photo-1572809743561-aee6e86a6ca7?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1572809743561-aee6e86a6ca7?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'breakfast', 'parking', 'restaurant'],
- description: 'კახეთის სიმბოლოს - თელავის ცენტრში, ვენახებითა და კავკასიონის ხედებით.',
- phone: '0350 27 00 00', tags: ['კახეთი', 'ღვინო', 'ბუნება'],
- },
- {
- id: 'h-6', name: 'Rooms Hotel Tbilisi', stars: 5, rating: 9.4, reviewCount: 3102,
- pricePerNight: 380, city: 'თბილისი', district: 'მარჯანიშვილი',
- image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'pool', 'gym', 'restaurant', 'breakfast'],
- description: 'ბუტიკ სასტუმრო ინდუსტრიულ სტილში, თანამედროვე ხელოვნებისა და ქართული სტუმართმოყვარეობის შეხამებით.',
- phone: '032 220 50 00', tags: ['ბუტიკ', 'ლუქსი', 'დიზაინი'], featured: true,
- },
- {
- id: 'h-7', name: 'Gudauri Inn', stars: 3, rating: 8.1, reviewCount: 432,
- pricePerNight: 90, city: 'გუდაური', district: 'კურორტი',
- image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'breakfast', 'parking'],
- description: 'მთის სასტუმრო გუდაურის სათხილამურო კურორტზე. ზამთრის სეზონში იდეალური.',
- phone: '032 211 00 00', tags: ['მთა', 'სათხილამურო', 'ბუნება'],
- },
- {
- id: 'h-8', name: 'Borjomi Palace Hotel', stars: 4, rating: 8.7, reviewCount: 689,
- pricePerNight: 165, city: 'ბორჯომი', district: 'ცენტრი',
- image: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'breakfast', 'pool', 'parking', 'gym'],
- description: 'ბორჯომის მინერალური წყლებით ცნობილ კურორტზე, ტყის გარემოცვაში.',
- phone: '0367 22 22 22', tags: ['სპა', 'ჯანმრთელობა', 'ტყე'],
- },
- {
- id: 'h-9', name: 'Guesthouse Svaneti', stars: 3, rating: 9.0, reviewCount: 215,
- pricePerNight: 70, city: 'მესტია', district: 'ისტ. ნაწილი',
- image: 'https://images.unsplash.com/photo-1509470475192-4516873ce93d?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1509470475192-4516873ce93d?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'breakfast'],
- description: 'სვანური კოშკის მახლობლად, ტრადიციული სვანური სახლი ხვამლის ხედებით.',
- phone: '599 000 001', tags: ['სვანეთი', 'ტრადიციული', 'მთა'],
- },
- {
- id: 'h-10', name: 'Le Meridien Batumi', stars: 5, rating: 9.1, reviewCount: 1560,
- pricePerNight: 290, city: 'ბათუმი', district: 'ბათუმის ბულვარი',
- image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=800&q=80',
- images: ['https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=800&q=80'],
- amenities: ['wifi', 'pool', 'gym', 'restaurant', 'breakfast', 'parking'],
- description: 'შავი ზღვის სანაპიროზე, ბათუმის ბულვართან, ევროპული კლასის სტანდარტებით.',
- phone: '0422 29 00 00', tags: ['ლუქსი', 'ზღვა', 'სპა'], featured: true,
- },
-];
 
 const AMENITY_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
  wifi:  { icon: <Wifi size={13} />,   label: 'Wi-Fi' },
@@ -133,6 +41,7 @@ interface HotelsPageProps {
 }
 
 export default function HotelsPage({ onSelectHotel }: HotelsPageProps) {
+ const { hotels: dbHotels, loading } = useServices();
  const [searchQ, setSearchQ] = useState('');
  const [selectedCity, setSelectedCity] = useState('ყველა');
  const [minStars, setMinStars] = useState(0);
@@ -141,8 +50,10 @@ export default function HotelsPage({ onSelectHotel }: HotelsPageProps) {
  const [showFilters, setShowFilters] = useState(false);
  const [favorites, setFavorites] = useState<string[]>([]);
 
+ const allHotels = dbHotels;
+
  const filtered = useMemo(() => {
- return HOTELS.filter(h => {
+ return allHotels.filter(h => {
   if (searchQ && !h.name.toLowerCase().includes(searchQ.toLowerCase()) && !h.city.toLowerCase().includes(searchQ.toLowerCase()) && !h.district.toLowerCase().includes(searchQ.toLowerCase())) return false;
   if (selectedCity !== 'ყველა' && h.city !== selectedCity) return false;
   if (minStars > 0 && h.stars < minStars) return false;
@@ -254,9 +165,15 @@ export default function HotelsPage({ onSelectHotel }: HotelsPageProps) {
   </div>
 
   {/* Grid */}
-  {filtered.length === 0 ? (
+  {loading ? (
+   <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
+   <Loader2 size={28} className="animate-spin mx-auto text-gray-300 mb-3" />
+   <p className="text-gray-400 text-sm">იტვირთება...</p>
+   </div>
+  ) : filtered.length === 0 ? (
    <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
    <p className="text-gray-400 text-sm">სასტუმრო ვერ მოიძებნა</p>
+   <p className="text-gray-300 text-xs mt-1">ადმინ პანელში დაამატეთ სასტუმროები</p>
    </div>
   ) : (
    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -20,6 +20,14 @@ interface PropertyDraft {
  phone: string | null;
  floor: number | null;
  total_floors: number | null;
+ kitchen_area_sqm: number | null;
+ floor_type: string | null;
+ balconies: number | null;
+ bathrooms: number | null;
+ building_status: string | null;
+ building_type: string | null;
+ building_condition: string | null;
+ additional_info: string[] | null;
 }
 
 const BG_PHOTO = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80';
@@ -59,7 +67,15 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
  description: '',
  phone: '',
  floor: '',
- total_floors: ''
+ total_floors: '',
+ kitchen_area_sqm: '',
+ floor_type: '',
+ balconies: '',
+ bathrooms: '',
+ building_status: '',
+ building_type: '',
+ building_condition: '',
+ additional_info: [] as string[]
  });
 
  useEffect(() => {
@@ -93,7 +109,15 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
    description: newRow.description || prev.description,
    phone: newRow.phone || prev.phone,
    floor: newRow.floor?.toString() || prev.floor,
-   total_floors: newRow.total_floors?.toString() || prev.total_floors
+   total_floors: newRow.total_floors?.toString() || prev.total_floors,
+   kitchen_area_sqm: newRow.kitchen_area_sqm?.toString() || prev.kitchen_area_sqm,
+   floor_type: newRow.floor_type || prev.floor_type,
+   balconies: newRow.balconies?.toString() || prev.balconies,
+   bathrooms: newRow.bathrooms?.toString() || prev.bathrooms,
+   building_status: newRow.building_status || prev.building_status,
+   building_type: newRow.building_type || prev.building_type,
+   building_condition: newRow.building_condition || prev.building_condition,
+   additional_info: newRow.additional_info?.length ? newRow.additional_info : prev.additional_info
    }));
 
    setTimeout(() => setIsLive(false), 2000);
@@ -130,6 +154,15 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
 
  const updateField = (key: string, value: string) => {
  setForm(prev => ({ ...prev, [key]: value }));
+ };
+
+ const toggleAdditionalInfo = (val: string) => {
+ setForm(prev => ({
+  ...prev,
+  additional_info: prev.additional_info.includes(val)
+   ? prev.additional_info.filter(v => v !== val)
+   : [...prev.additional_info, val]
+ }));
  };
 
  const handleSubmit = async (e: React.FormEvent) => {
@@ -172,8 +205,8 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
 
   const payload = {
   user_id: user?.id ?? null,
-  author_name: profile?.name || '',
-  author_avatar: profile?.avatar_url || '',
+  author_name: profile?.is_agent ? (profile?.name || '') : 'მომხმარებელი',
+  author_avatar: profile?.is_agent ? (profile?.avatar_url || '') : '',
   title: form.title,
   deal_type: form.deal_type,
   property_type: form.property_type,
@@ -186,6 +219,14 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
   phone: form.phone || profile?.phone || null,
   floor: form.floor ? parseInt(form.floor) : null,
   total_floors: form.total_floors ? parseInt(form.total_floors) : null,
+  kitchen_area_sqm: form.kitchen_area_sqm ? parseFloat(form.kitchen_area_sqm) : null,
+  floor_type: form.floor_type || null,
+  balconies: form.balconies ? parseInt(form.balconies) : null,
+  bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
+  building_status: form.building_status || null,
+  building_type: form.building_type || null,
+  building_condition: form.building_condition || null,
+  additional_info: form.additional_info.length ? form.additional_info : null,
   images: finalImages,
   lat: pickedLat,
   lng: pickedLng,
@@ -204,7 +245,9 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
   setForm({
   title: '', property_type: 'apartment', deal_type: 'sale', location: '', rooms: '',
   area_sqm: '', price: '', currency: 'GEL', description: '', phone: '',
-  floor: '', total_floors: ''
+  floor: '', total_floors: '',
+  kitchen_area_sqm: '', floor_type: '', balconies: '', bathrooms: '',
+  building_status: '', building_type: '', building_condition: '', additional_info: []
   });
   setUploadedImages([]);
   setImageFiles([]);
@@ -294,7 +337,7 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
   {/* Auto-fill from messaging apps */}
   <div className="grid grid-cols-2 gap-3">
    <a
-   href="https://t.me/adjarahome_bot?start=property"
+   href="https://t.me/newlife_bot?start=property"
    target="_blank"
    rel="noopener noreferrer"
    className="flex items-center justify-center gap-2 backdrop-blur-xl bg-white/50 border border-white/60 rounded-2xl py-3 px-4 shadow-lg shadow-stone-300/10 hover:bg-white/70 hover:shadow-xl transition-all duration-300 cursor-pointer"
@@ -316,12 +359,12 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
   {/* Main Form Card */}
   <form
    onSubmit={handleSubmit}
-   className="backdrop-blur-2xl bg-white/60 border border-white/60 rounded-[32px] shadow-2xl shadow-stone-300/20 p-6 sm:p-8 space-y-5 transition-all"
+   className="bg-white border border-gray-200 rounded-[32px] shadow-lg p-6 sm:p-8 space-y-5 transition-all"
   >
 
    {/* Photos */}
    <div>
-   <div className="border-2 border-dashed border-stone-300/60 bg-white/30 rounded-2xl p-3 backdrop-blur-sm">
+   <div className="border-2 border-dashed border-gray-300 bg-gray-50 rounded-2xl p-3">
     <input
     ref={photoInputRef}
     type="file"
@@ -392,7 +435,6 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
     { id: 'cottage', label: 'აგარაკი' },
     { id: 'land', label: 'მიწის ნაკვეთი' },
     { id: 'commercial', label: 'კომერციული' },
-    { id: 'hotel', label: 'სასტუმრო' },
     ].map(d => (
     <button
      key={d.id}
@@ -456,8 +498,8 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
     onClick={() => setShowMapPicker(v => !v)}
     className={`shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-2xl text-[13px] font-semibold border transition-all cursor-pointer ${
      showMapPicker || pickedLat
-     ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200/50'
-     : 'bg-white/70 border-white/80 text-gray-600 hover:bg-white/90'
+     ? 'bg-ss-primary text-white border-ss-primary shadow-sm'
+     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
     }`}
     >
     <Map size={14} />
@@ -500,6 +542,171 @@ export default function AddProperty({ onBack }: AddPropertyProps) {
     </div>
    ))}
    </div>
+
+   {/* Detailed Fields — apartment / house / cottage */}
+   {['apartment', 'house', 'cottage'].includes(form.property_type) && (
+   <div className="space-y-4 border-t border-gray-100 pt-4">
+    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">დეტალური ინფორმაცია</p>
+
+    {/* Kitchen area */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">სამზარეულოს ფართი (მ²)</label>
+     <input
+     type="text"
+     value={form.kitchen_area_sqm}
+     onChange={e => updateField('kitchen_area_sqm', e.target.value)}
+     placeholder="12"
+     className="w-full bg-white/70 border border-white/80 rounded-2xl py-3 px-4 text-[14px] text-gray-900 placeholder-gray-400 outline-none focus:bg-white/90 focus:shadow-lg focus:shadow-stone-200/40 transition-all duration-300"
+     />
+    </div>
+
+    {/* Floor type */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">სართულის ტიპი</label>
+     <div className="flex gap-1.5 bg-stone-200/40 p-1.5 rounded-2xl backdrop-blur-sm">
+      {['დუპლექსი', 'ტრიპლექსი', 'სხვენი'].map(d => (
+      <button
+       key={d}
+       type="button"
+       onClick={() => updateField('floor_type', form.floor_type === d ? '' : d)}
+       className={`flex-1 py-2 text-[12px] font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+       form.floor_type === d
+        ? 'bg-white text-gray-900 shadow-md shadow-stone-300/20'
+        : 'text-gray-500 hover:text-gray-700'
+       }`}
+      >
+       {d}
+      </button>
+      ))}
+     </div>
+    </div>
+
+    {/* Balconies */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">აივანი / ლოჯია</label>
+     <div className="flex gap-1.5 bg-stone-200/40 p-1.5 rounded-2xl backdrop-blur-sm">
+      {['1', '2', '3', '4', '5', 'არ აქვს'].map(d => (
+      <button
+       key={d}
+       type="button"
+       onClick={() => updateField('balconies', d === 'არ აქვს' ? '0' : d)}
+       className={`flex-1 py-2 text-[12px] font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+       form.balconies === (d === 'არ აქვს' ? '0' : d)
+        ? 'bg-white text-gray-900 shadow-md shadow-stone-300/20'
+        : 'text-gray-500 hover:text-gray-700'
+       }`}
+      >
+       {d}
+      </button>
+      ))}
+     </div>
+    </div>
+
+    {/* Bathrooms */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">სველი წერტილი</label>
+     <div className="flex gap-1.5 bg-stone-200/40 p-1.5 rounded-2xl backdrop-blur-sm">
+      {['1', '2', '3', '4', '5+', 'არ აქვს'].map(d => (
+      <button
+       key={d}
+       type="button"
+       onClick={() => updateField('bathrooms', d === 'არ აქვს' ? '0' : d === '5+' ? '5' : d)}
+       className={`flex-1 py-2 text-[12px] font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+       form.bathrooms === (d === 'არ აქვს' ? '0' : d === '5+' ? '5' : d)
+        ? 'bg-white text-gray-900 shadow-md shadow-stone-300/20'
+        : 'text-gray-500 hover:text-gray-700'
+       }`}
+      >
+       {d}
+      </button>
+      ))}
+     </div>
+    </div>
+
+    {/* Building status */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">სტატუსი <span className="text-red-400">*</span></label>
+     <select
+     value={form.building_status}
+     onChange={e => updateField('building_status', e.target.value)}
+     className="w-full bg-white/70 border border-white/80 rounded-2xl py-3 px-4 text-[14px] text-gray-900 outline-none focus:bg-white/90 focus:shadow-lg focus:shadow-stone-200/40 transition-all duration-300 appearance-none"
+     >
+      <option value="">აირჩიეთ</option>
+      <option value="ახალი აშენებული">ახალი აშენებული</option>
+      <option value="მშენებარე">მშენებარე</option>
+      <option value="ძველი აშენებული">ძველი აშენებული</option>
+      <option value="პროექტი">პროექტი</option>
+     </select>
+    </div>
+
+    {/* Building type */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">პროექტი</label>
+     <select
+     value={form.building_type}
+     onChange={e => updateField('building_type', e.target.value)}
+     className="w-full bg-white/70 border border-white/80 rounded-2xl py-3 px-4 text-[14px] text-gray-900 outline-none focus:bg-white/90 focus:shadow-lg focus:shadow-stone-200/40 transition-all duration-300 appearance-none"
+     >
+      <option value="">აირჩიეთ</option>
+      <option value="ლენინგრადის">ლენინგრადის</option>
+      <option value="ლვოვის">ლვოვის</option>
+      <option value="კიევი">კიევი</option>
+      <option value="თბილისური ეზო">თბილისური ეზო</option>
+      <option value="მოსკოვის">მოსკოვის</option>
+      <option value="ქალაქური">ქალაქური</option>
+      <option value="ჩეხური">ჩეხური</option>
+      <option value="ხრუშჩოვის">ხრუშჩოვის</option>
+      <option value="თუხარელის">თუხარელის</option>
+      <option value="ვეძისი">ვეძისი</option>
+      <option value="იუგოსლავიის">იუგოსლავიის</option>
+      <option value="მეტრომშენის">მეტრომშენის</option>
+      <option value="არასტანდარტული">არასტანდარტული</option>
+      <option value="ყავლაშვილის">ყავლაშვილის</option>
+     </select>
+    </div>
+
+    {/* Building condition */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">მდგომარეობა</label>
+     <select
+     value={form.building_condition}
+     onChange={e => updateField('building_condition', e.target.value)}
+     className="w-full bg-white/70 border border-white/80 rounded-2xl py-3 px-4 text-[14px] text-gray-900 outline-none focus:bg-white/90 focus:shadow-lg focus:shadow-stone-200/40 transition-all duration-300 appearance-none"
+     >
+      <option value="">აირჩიეთ</option>
+      <option value="სარემონტო">სარემონტო</option>
+      <option value="მიმდინარე რემონტი">მიმდინარე რემონტი</option>
+      <option value="ძველი რემონტით">ძველი რემონტით</option>
+      <option value="გარემონტებული">გარემონტებული</option>
+      <option value="ახალი რემონტით">ახალი რემონტით</option>
+      <option value="მწვანე კარკასი">მწვანე კარკასი</option>
+      <option value="შავი კარკასი">შავი კარკასი</option>
+      <option value="თეთრი კარკასი">თეთრი კარკასი</option>
+     </select>
+    </div>
+
+    {/* Additional info */}
+    <div className="space-y-1.5">
+     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1">სხვა ინფორმაცია</label>
+     <div className="flex flex-wrap gap-2">
+      {['ხედი ეზოზე', 'ხედი ქუჩაზე', 'ნათელი', 'მყუდრო'].map(d => (
+      <button
+       key={d}
+       type="button"
+       onClick={() => toggleAdditionalInfo(d)}
+       className={`px-3 py-1.5 rounded-xl text-[12px] font-semibold border-2 transition-all cursor-pointer ${
+       form.additional_info.includes(d)
+        ? 'bg-gray-900 border-gray-900 text-white shadow-sm'
+        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-400'
+       }`}
+      >
+       {d}
+      </button>
+      ))}
+     </div>
+    </div>
+   </div>
+   )}
 
    {/* Price */}
    <div className="grid grid-cols-2 gap-3">

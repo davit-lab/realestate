@@ -83,7 +83,7 @@ function inp(extra = '') {
 }
 
 export default function AddListingModal({ isOpen, onClose, onAddListing }: AddListingModalProps) {
- const { user } = useAuth();
+ const { user, profile } = useAuth();
  const [section, setSection] = useState<Section | null>(null);
  const [success, setSuccess] = useState(false);
  const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,7 +91,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  const [imageFiles, setImageFiles] = useState<File[]>([]);
 
  // Real Estate state
- const [re, setRe] = useState({ dealType: 'sale' as ListingType, propType: 'apartment', title: '', city: 'თბილისი', district: '', street: '', rooms: '3', beds: '2', area: '', floor: '', totalFloors: '', status: 'ახალი აშენებული', condition: 'ახალი რემონტით', description: '', priceGel: '', priceUsd: '', phone: '' });
+ const [re, setRe] = useState({ dealType: 'sale' as ListingType, propType: 'apartment', title: '', city: 'თბილისი', district: '', street: '', rooms: '3', beds: '2', area: '', floor: '', totalFloors: '', status: 'ახალი აშენებული', condition: 'ახალი რემონტით', description: '', priceGel: '', priceUsd: '', phone: '', kitchenArea: '', floorType: '', balconies: '', bathrooms: '', buildingType: '', additionalInfo: [] as string[] });
  const [pickedLat, setPickedLat] = useState<number | null>(null);
  const [pickedLng, setPickedLng] = useState<number | null>(null);
  const [showMapPicker, setShowMapPicker] = useState(false);
@@ -133,6 +133,10 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  setHotel(p => ({ ...p, amenities: p.amenities.includes(id) ? p.amenities.filter(a => a !== id) : [...p.amenities, id] }));
  };
 
+ const toggleReAdditional = (val: string) => {
+ setRe(p => ({ ...p, additionalInfo: p.additionalInfo.includes(val) ? p.additionalInfo.filter(v => v !== val) : [...p.additionalInfo, val] }));
+ };
+
  const handleGelChange = (v: string) => {
  setRe(p => ({ ...p, priceGel: v, priceUsd: v && !isNaN(Number(v)) ? Math.round(Number(v) / 2.7).toString() : '' }));
  };
@@ -160,14 +164,22 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
   rooms: re.rooms, beds: parseInt(re.beds) || 2, area: parseFloat(re.area) || 0,
   vipStatus: selectedPackage, image: images[0] || '', images,
   time: 'ახლახან',
-  author: { name: 'მომხმარებელი', phone: re.phone || '599 00 00 00', avatar: '', isAgent: false, listingCount: 1 },
+  author: { name: profile?.is_agent ? (profile?.name || 'მომხმარებელი') : 'მომხმარებელი', phone: re.phone || '599 00 00 00', avatar: profile?.is_agent ? (profile?.avatar_url || '') : '', isAgent: profile?.is_agent || false, listingCount: 1 },
   condition: re.condition, status: re.status,
   descriptions: { ka: re.description || '', en: '', ru: '' },
   priceLevel: priceLari > 1500000 ? 'high' : priceLari < 300000 ? 'cheap' : 'average',
   coordinates: { x: 35 + Math.random() * 30, y: 35 + Math.random() * 30 }, comments: [],
   lat: pickedLat, lng: pickedLng,
   user_id: user?.id,
-  property_type: re.propType
+  property_type: re.propType,
+  kitchen_area_sqm: re.kitchenArea ? parseFloat(re.kitchenArea) : undefined,
+  floor_type: re.floorType || undefined,
+  balconies: re.balconies ? parseInt(re.balconies) : undefined,
+  bathrooms: re.bathrooms ? parseInt(re.bathrooms) : undefined,
+  building_status: re.status || undefined,
+  building_type: re.buildingType || undefined,
+  building_condition: re.condition || undefined,
+  additional_info: re.additionalInfo.length ? re.additionalInfo : undefined
   };
   // Insert to Supabase if configured
   if (isSupabaseConfigured && user?.id) {
@@ -186,14 +198,22 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
    description: re.description || '',
    phone: re.phone || null,
    floor: re.floor ? parseInt(re.floor) : null,
-   total_floors: null,
+   total_floors: re.totalFloors ? parseInt(re.totalFloors) : null,
+   kitchen_area_sqm: re.kitchenArea ? parseFloat(re.kitchenArea) : null,
+   floor_type: re.floorType || null,
+   balconies: re.balconies ? parseInt(re.balconies) : null,
+   bathrooms: re.bathrooms ? parseInt(re.bathrooms) : null,
+   building_status: re.status || null,
+   building_type: re.buildingType || null,
+   building_condition: re.condition || null,
+   additional_info: re.additionalInfo.length ? re.additionalInfo : null,
    lat: pickedLat,
    lng: pickedLng,
    images: newListing.images || [],
    status: 'live',
    vip_status: selectedPackage,
-   author_name: user?.user_metadata?.name || 'მომხმარებელი',
-   author_avatar: '',
+   author_name: profile?.is_agent ? (user?.user_metadata?.name || '') : 'მომხმარებელი',
+   author_avatar: profile?.is_agent ? '' : '',
   };
   const { error } = await supabase.from('properties').insert(payload);
   if (error) {
@@ -215,20 +235,20 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
  };
 
  const SECTIONS = [
- { id: 'real_estate' as Section, label: 'უძრავი ქონება', sub: 'ბინა, სახლი, მიწა, კომერციული', icon: <Home size={22} />, color: 'from-violet-500 to-purple-600', bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' },
+ { id: 'real_estate' as Section, label: 'უძრავი ქონება', sub: 'ბინა, სახლი, მიწა, კომერციული', icon: <Home size={22} />, color: 'bg-ss-primary', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-ss-primary' },
  { id: 'hotel' as Section, label: 'სასტუმრო', sub: 'სასტუმრო, ჰოსტელი, აპარტამენტი', icon: <Building2 size={22} />, color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
  { id: 'tourism' as Section, label: 'ტურიზმი', sub: 'ადგილი, ფრენა, მატარებელი, კონცერტი', icon: <Compass size={22} />, color: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
  ];
 
  const activeSection = SECTIONS.find(s => s.id === section);
- const headerGradient = section ? activeSection?.color : 'from-gray-800 to-gray-900';
+ const headerBg = section ? activeSection?.color : 'bg-gray-900';
 
  return (
  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto font-sans">
   <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden my-4 max-h-[94vh] flex flex-col">
 
   {/* Header */}
-  <div className={`bg-gradient-to-r ${headerGradient} text-white px-5 py-4 flex items-center justify-between shrink-0`}>
+  <div className={`${headerBg} text-white px-5 py-4 flex items-center justify-between shrink-0`}>
    <div className="flex items-center gap-3">
    {section && (
     <button onClick={() => { setSection(null); setImages([]); setImageFiles([]); }}
@@ -265,7 +285,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
    {SECTIONS.map(s => (
     <button key={s.id} onClick={() => setSection(s.id)}
     className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 ${s.bg} ${s.border} hover:shadow-md transition-all cursor-pointer group`}>
-    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${s.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform`}>
+    <div className={`w-12 h-12 rounded-2xl ${s.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform`}>
      {s.icon}
     </div>
     <div className="text-left">
@@ -281,19 +301,19 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
   ) : section === 'real_estate' ? (
    <form onSubmit={handleSubmit} className="px-5 py-4 overflow-y-auto space-y-4 flex-1">
    {/* Deal type */}
-   <div className="flex gap-1 bg-violet-50 p-1 rounded-xl border border-violet-100">
+   <div className="flex gap-1 bg-purple-50 p-1 rounded-xl border border-purple-100">
     {(['sale','rent','daily_rent','pledge'] as ListingType[]).map(d => (
     <button key={d} type="button" onClick={() => setRe(p=>({...p,dealType:d}))}
-     className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all cursor-pointer ${re.dealType===d ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+     className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all cursor-pointer ${re.dealType===d ? 'bg-ss-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
      {d==='sale'?'იყიდება':d==='rent'?'ქირავდება':d==='daily_rent'?'დღიურად':'გირაო'}
     </button>
     ))}
    </div>
    {/* Property type */}
    <div className="flex gap-1.5 flex-wrap">
-    {[{id:'apartment',l:'ბინა'},{id:'house',l:'სახლი'},{id:'cottage',l:'კოტეჯი'},{id:'land',l:'მიწა'},{id:'commercial',l:'კომერც.'}].map(t => (
+    {[{id:'apartment',l:'ბინა'},{id:'house',l:'სახლი'},{id:'cottage',l:'აგარაკი'},{id:'land',l:'მიწა'},{id:'commercial',l:'კომერც.'}].map(t => (
     <button key={t.id} type="button" onClick={() => setRe(p=>({...p,propType:t.id}))}
-     className={`px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-colors cursor-pointer ${re.propType===t.id ? 'bg-violet-100 text-violet-700 border border-violet-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+     className={`px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-colors cursor-pointer ${re.propType===t.id ? 'bg-purple-50 text-ss-primary border border-ss-primary/30' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
      {t.l}
     </button>
     ))}
@@ -326,7 +346,7 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
     onClick={() => setShowMapPicker(v => !v)}
     className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition-all cursor-pointer w-full justify-center ${
      showMapPicker || pickedLat
-     ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-200/50'
+     ? 'bg-ss-primary text-white border-ss-primary shadow-sm'
      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
     }`}
     >
@@ -368,16 +388,103 @@ export default function AddListingModal({ isOpen, onClose, onAddListing }: AddLi
    <div className="grid grid-cols-2 gap-2.5">
     <Field label="სტატუსი">
     <select value={re.status} onChange={e=>setRe(p=>({...p,status:e.target.value}))} className={inp()}>
-     <option>ახალი აშენებული</option><option>ძველი აშენებული</option><option>მშენებარე</option>
+     <option>ახალი აშენებული</option><option>მშენებარე</option><option>ძველი აშენებული</option><option>პროექტი</option>
     </select>
     </Field>
     <Field label="მდგომარეობა">
     <select value={re.condition} onChange={e=>setRe(p=>({...p,condition:e.target.value}))} className={inp()}>
-     <option>ახალი რემონტით</option><option>კოსმეტიკური რემონტი</option><option>გარეულია</option><option>ჩარჩო</option>
+     <option>სარემონტო</option><option>მიმდინარე რემონტი</option><option>ძველი რემონტით</option><option>გარემონტებული</option><option>ახალი რემონტით</option><option>მწვანე კარკასი</option><option>შავი კარკასი</option><option>თეთრი კარკასი</option>
     </select>
     </Field>
    </div>
    )}
+
+   {/* Detailed Fields — apartment / house / cottage */}
+   {['apartment', 'house', 'cottage'].includes(re.propType) && (
+   <div className="space-y-3 border-t border-gray-100 pt-3">
+    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">დეტალური ინფორმაცია</p>
+
+    <div className="grid grid-cols-2 gap-2.5">
+     <Field label="სამზარეულოს ფართი (მ²)">
+      <input value={re.kitchenArea} onChange={e=>setRe(p=>({...p,kitchenArea:e.target.value}))} placeholder="12" className={inp('text-center')} />
+     </Field>
+     <Field label="სართულის ტიპი">
+      <select value={re.floorType} onChange={e=>setRe(p=>({...p,floorType:e.target.value}))} className={inp()}>
+       <option value="">აირჩიეთ</option>
+       <option>დუპლექსი</option>
+       <option>ტრიპლექსი</option>
+       <option>სხვენი</option>
+      </select>
+     </Field>
+    </div>
+
+    <div className="grid grid-cols-2 gap-2.5">
+     <Field label="აივანი / ლოჯია">
+      <select value={re.balconies} onChange={e=>setRe(p=>({...p,balconies:e.target.value}))} className={inp()}>
+       <option value="">აირჩიეთ</option>
+       <option value="1">1</option>
+       <option value="2">2</option>
+       <option value="3">3</option>
+       <option value="4">4</option>
+       <option value="5">5</option>
+       <option value="0">არ აქვს</option>
+      </select>
+     </Field>
+     <Field label="სველი წერტილი">
+      <select value={re.bathrooms} onChange={e=>setRe(p=>({...p,bathrooms:e.target.value}))} className={inp()}>
+       <option value="">აირჩიეთ</option>
+       <option value="1">1</option>
+       <option value="2">2</option>
+       <option value="3">3</option>
+       <option value="4">4</option>
+       <option value="5">5+</option>
+       <option value="0">არ აქვს</option>
+      </select>
+     </Field>
+    </div>
+
+    <Field label="პროექტი">
+     <select value={re.buildingType} onChange={e=>setRe(p=>({...p,buildingType:e.target.value}))} className={inp()}>
+      <option value="">აირჩიეთ</option>
+      <option>ლენინგრადის</option>
+      <option>ლვოვის</option>
+      <option>კიევი</option>
+      <option>თბილისური ეზო</option>
+      <option>მოსკოვის</option>
+      <option>ქალაქური</option>
+      <option>ჩეხური</option>
+      <option>ხრუშჩოვის</option>
+      <option>თუხარელის</option>
+      <option>ვეძისი</option>
+      <option>იუგოსლავიის</option>
+      <option>მეტრომშენის</option>
+      <option>არასტანდარტული</option>
+      <option>ყავლაშვილის</option>
+     </select>
+    </Field>
+
+    <div>
+     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">სხვა ინფორმაცია</label>
+     <div className="flex flex-wrap gap-2">
+      {['ხედი ეზოზე', 'ხედი ქუჩაზე', 'ნათელი', 'მყუდრო'].map(d => (
+      <button
+       key={d}
+       type="button"
+       onClick={() => toggleReAdditional(d)}
+       className={`px-3 py-1.5 rounded-xl text-[12px] font-semibold border-2 transition-all cursor-pointer ${
+       re.additionalInfo.includes(d)
+        ? 'bg-violet-600 border-violet-600 text-white shadow-sm'
+        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-400'
+       }`}
+      >
+       {d}
+      </button>
+      ))}
+     </div>
+    </div>
+   </div>
+   )}
+
    <textarea rows={3} value={re.description} onChange={e=>setRe(p=>({...p,description:e.target.value}))} placeholder="აღწერა — ლოკაცია, უპირატესობები, ინფრასტრუქტურა..." className={inp('resize-none')} />
    <div className="grid grid-cols-2 gap-2.5">
     <Field label="ფასი ₾">

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { HelpCircle, Search, ChevronDown, Check, LayoutGrid, Map, MapPin, Scale } from 'lucide-react';
+import { HelpCircle, Search, ChevronDown, Check, LayoutGrid, Map, MapPin, Scale, List } from 'lucide-react';
 import { Listing, ListingType, PaymentCard, ActiveTab } from './types';
 import { EXCHANGE_RATE as exchangeRate } from './lib/constants';
 import { GEORGIAN_LOCATIONS } from './data/georgianLocations';
@@ -30,6 +30,7 @@ import HotelDetailPage from './components/HotelDetailPage';
 import TourismDetailPage from './components/TourismDetailPage';
 import EmptyState from './components/EmptyState';
 import CompareDrawer from './components/CompareDrawer';
+import QuickViewModal from './components/QuickViewModal';
 import MarketStats from './components/MarketStats';
 import ScrollReveal from './components/ScrollReveal';
 import { useAuth } from './contexts/AuthContext';
@@ -39,10 +40,13 @@ import { useSearchHistory } from './hooks/useSearchHistory';
 import { useRecentViews } from './hooks/useRecentViews';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { useConversations } from './hooks/useConversations';
 
 export default function App() {
  const { user, profile, isAdmin, isAuthenticated, signOut } = useAuth();
- const { dbListings } = useSupabaseListings();
+ const { dbListings, refetch: refetchListings, updateListing, deleteListing } = useSupabaseListings();
+ const { conversations } = useConversations(user?.id);
+ const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
  const navigate = useNavigate();
  const location = useLocation();
  const [showAuthModal, setShowAuthModal] = useState(false);
@@ -105,24 +109,14 @@ export default function App() {
  navigate(`/listing/${id}`);
  }, [navigate]);
 
- // Core collections — load from localStorage or start empty
- const [localListings, setLocalListings] = useState<Listing[]>(() => {
- try { const raw = localStorage.getItem('adjarahome_listings'); return raw ? JSON.parse(raw) : []; }
- catch { return []; }
- });
-
- // Merge: DB listings first, then local-only ones not already in DB
- const listings = [
- ...dbListings,
- ...localListings.filter(l => !dbListings.find(d => d.id === l.id)),
- ];
- const setListings = (fn: any) => setLocalListings(fn);
+ // Core listings — exclusively from Supabase
+ const listings = dbListings;
  const [paymentCards, setPaymentCards] = useState<PaymentCard[]>(() => {
- try { const raw = localStorage.getItem('adjarahome_cards'); return raw ? JSON.parse(raw) : []; }
+ try { const raw = localStorage.getItem('newlife_cards'); return raw ? JSON.parse(raw) : []; }
  catch { return []; }
  });
  const [userProfile, setUserProfile] = useState(() => {
- try { const raw = localStorage.getItem('adjarahome_profile');
+ try { const raw = localStorage.getItem('newlife_profile');
   return raw ? JSON.parse(raw) : {
   name: '', userId: '', avatar: '', balance: 0, rating: 0,
   reviewCount: 0, joinedDate: '', phone: '', smsEnabled: false
@@ -131,7 +125,7 @@ export default function App() {
  catch { return { name: '', userId: '', avatar: '', balance: 0, rating: 0, reviewCount: 0, joinedDate: '', phone: '', smsEnabled: false }; }
  });
  const [chats, setChats] = useState<any[]>(() => {
- try { const raw = localStorage.getItem('adjarahome_chats'); return raw ? JSON.parse(raw) : []; }
+ try { const raw = localStorage.getItem('newlife_chats'); return raw ? JSON.parse(raw) : []; }
  catch { return []; }
  });
  const { favorites, toggleFavorite } = useFavorites(user?.id);
@@ -149,13 +143,24 @@ export default function App() {
  const [roomFilter, setRoomFilter] = useState('any');
  const [priceMin, setPriceMin] = useState('');
  const [priceMax, setPriceMax] = useState('');
+ const [areaMin, setAreaMin] = useState('');
+ const [areaMax, setAreaMax] = useState('');
  const [selectedStatus, setSelectedStatus] = useState('all');
 
+ const [floorTypeFilter, setFloorTypeFilter] = useState('all');
+ const [bathroomsFilter, setBathroomsFilter] = useState('all');
+ const [balconiesFilter, setBalconiesFilter] = useState('all');
+ const [buildingStatusFilter, setBuildingStatusFilter] = useState('all');
+ const [buildingConditionFilter, setBuildingConditionFilter] = useState('all');
+ const [buildingTypeFilter, setBuildingTypeFilter] = useState('all');
  // Multi-selector Dropdowns states
  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 
- // View mode: grid vs map
- const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+ // View mode: grid / list / map
+ const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid');
+
+ // Quick-view modal
+ const [quickViewListingId, setQuickViewListingId] = useState<string | null>(null);
 
  // Sort order
  const [sortOrder, setSortOrder] = useState<'vip' | 'newest' | 'price_asc' | 'price_desc'>('vip');
@@ -184,31 +189,27 @@ export default function App() {
  // Sync window page title with current tab/listing
  useEffect(() => {
  if (activeTab === 'profile') {
-  document.title = 'ჩემი პროფილი • Adjarahome.ge';
+  document.title = 'ჩემი პროფილი • Newlife.ge';
  } else if (activeTab === 'favorites') {
-  document.title = 'რჩეულები განცხადებები • Adjarahome.ge';
+  document.title = 'რჩეულები განცხადებები • Newlife.ge';
  } else if (activeTab === 'messages') {
-  document.title = 'ჩემი მიმოწერები • Adjarahome.ge';
+  document.title = 'ჩემი მიმოწერები • Newlife.ge';
  } else if (activeTab === 'add_property') {
-  document.title = 'განცხადების დამატება • Adjarahome.ge';
+  document.title = 'განცხადების დამატება • Newlife.ge';
  } else if (activeTab === 'admin') {
-  document.title = 'ადმინ პანელი • Adjarahome.ge';
+  document.title = 'ადმინ პანელი • Newlife.ge';
  } else if (activeTab === 'detail' && selectedListingId) {
   const listing = listings.find((p) => p.id === selectedListingId);
-  if (listing) document.title = `${listing.title} • Adjarahome.ge`;
+  if (listing) document.title = `${listing.title} • Newlife.ge`;
  } else {
-  document.title = 'უძრავი ქონება საქართველოში • Adjarahome.ge';
+  document.title = 'უძრავი ქონება საქართველოში • Newlife.ge';
  }
  }, [activeTab, selectedListingId, listings]);
 
- // Persist user data to localStorage (localListings only; dbListings fetched from Supabase)
- useEffect(() => {
-  try { localStorage.setItem('adjarahome_listings', JSON.stringify(localListings)); }
-  catch (e) { console.warn('[localStorage] listings persist failed:', e); }
- }, [localListings]);
- useEffect(() => { localStorage.setItem('adjarahome_cards', JSON.stringify(paymentCards)); }, [paymentCards]);
- useEffect(() => { localStorage.setItem('adjarahome_profile', JSON.stringify(userProfile)); }, [userProfile]);
- useEffect(() => { localStorage.setItem('adjarahome_chats', JSON.stringify(chats)); }, [chats]);
+ // Persist user data to localStorage (dbListings fetched from Supabase; no local listings)
+ useEffect(() => { localStorage.setItem('newlife_cards', JSON.stringify(paymentCards)); }, [paymentCards]);
+ useEffect(() => { localStorage.setItem('newlife_profile', JSON.stringify(userProfile)); }, [userProfile]);
+ useEffect(() => { localStorage.setItem('newlife_chats', JSON.stringify(chats)); }, [chats]);
 
  // Derived Cities & Districts lists based on uploaded listings
  const citiesList = useMemo(() => {
@@ -254,15 +255,14 @@ export default function App() {
  setActiveChatId(newChat.id);
  // Open mail client with booking confirmation
  const subject = encodeURIComponent(`ჯავშნის დადასტურება — ${data.itemName}`);
- const body = encodeURIComponent(data.details + '\n\nAdjarahome.ge');
+ const body = encodeURIComponent(data.details + '\n\nNewlife.ge');
  window.open(`mailto:${data.email}?subject=${subject}&body=${body}`);
  // Navigate to messages to show notification
  setTimeout(() => setActiveTab('messages'), 1200);
  };
 
- // Add new uploaded properties to arrays + Supabase
+ // After a component inserts into Supabase, update balances and refresh listings
  const handleAddListing = async (newListing: Listing) => {
- setListings((prev) => [newListing, ...prev]);
  setUserProfile((prev) => ({
   ...prev,
   balance: Math.max(0, prev.balance - (newListing.vipStatus === 'premium' ? 8 : newListing.vipStatus === 'super' ? 3 : newListing.vipStatus === 'basic' ? 1 : 0)),
@@ -273,35 +273,8 @@ export default function App() {
   const newBal = Math.max(0, (prof?.balance ?? 0) - _pkgPrice);
   await supabase.from('profiles').update({ balance: newBal }).eq('id', user.id);
  }
- // Also insert into Supabase
- if (isSupabaseConfigured) {
-  const { error } = await supabase.from('properties').insert({
-  title: newListing.title,
-  deal_type: newListing.type,
-  property_type: newListing.property_type || 'apartment',
-  location: newListing.location,
-  city: newListing.city,
-  district: newListing.district,
-  rooms: parseInt(newListing.rooms) || null,
-  area_sqm: newListing.area,
-  price: newListing.priceLari,
-  currency: 'GEL',
-  description: newListing.descriptions.ka,
-  phone: newListing.author.phone,
-  images: newListing.images,
-  status: newListing.status,
-  vip_status: newListing.vipStatus,
-  author_name: newListing.author.name,
-  author_avatar: newListing.author.avatar,
-  lat: newListing.lat ?? null,
-  lng: newListing.lng ?? null,
-  user_id: user?.id ?? null,
-  });
-  if (!error) {
-  // Trigger refresh of dbListings
-  window.dispatchEvent(new CustomEvent('adjarahome:refresh-listings'));
-  }
- }
+ // Refresh listings from Supabase
+ await refetchListings();
  };
 
  // Switch filter elements on clicking specific agents listings
@@ -313,8 +286,18 @@ export default function App() {
  setRoomFilter('any');
  setSearchArea(agentName);
  setMainSearchBarQuery('');
+ setFloorTypeFilter('all'); setBathroomsFilter('all'); setBalconiesFilter('all');
+ setBuildingStatusFilter('all'); setBuildingConditionFilter('all'); setBuildingTypeFilter('all');
  setActiveTab('explore');
  };
+
+ // Quick-view handler
+ const handleQuickView = useCallback((id: string, e: React.MouseEvent) => {
+  e.stopPropagation();
+  setQuickViewListingId(id);
+ }, []);
+
+ const closeQuickView = useCallback(() => setQuickViewListingId(null), []);
 
  // Compare listings helpers
  const toggleCompare = useCallback((id: string, e?: React.MouseEvent) => {
@@ -480,6 +463,25 @@ export default function App() {
   if (priceMin !== '' && price < Number(priceMin)) return false;
   if (priceMax !== '' && price > Number(priceMax)) return false;
 
+  // 8. Area range
+  if (areaMin !== '' && l.area < Number(areaMin)) return false;
+  if (areaMax !== '' && l.area > Number(areaMax)) return false;
+
+  // 9. Detailed filters
+  if (floorTypeFilter !== 'all' && l.floor_type !== floorTypeFilter) return false;
+  if (bathroomsFilter !== 'all') {
+    const num = Number(l.bathrooms) || 0;
+    if (bathroomsFilter === '3+' && num < 3) return false;
+    if (bathroomsFilter !== '3+' && num !== Number(bathroomsFilter)) return false;
+  }
+  if (balconiesFilter !== 'all') {
+    const num = Number(l.balconies) || 0;
+    if (balconiesFilter === 'yes' && num === 0) return false;
+    if (balconiesFilter === 'no' && num > 0) return false;
+  }
+  if (buildingStatusFilter !== 'all' && l.building_status !== buildingStatusFilter) return false;
+  if (buildingConditionFilter !== 'all' && l.building_condition !== buildingConditionFilter) return false;
+  if (buildingTypeFilter !== 'all' && l.building_type !== buildingTypeFilter) return false;
   return true;
  }).sort((a, b) => {
   if (sortOrder === 'price_asc') {
@@ -503,7 +505,7 @@ export default function App() {
   };
   return boostRank(b.vipStatus) - boostRank(a.vipStatus);
  });
- }, [listings, selectedType, searchArea, mainSearchBarQuery, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, currency, sortOrder, selectedStatus]);
+ }, [listings, selectedType, searchArea, mainSearchBarQuery, selectedCity, selectedDistrict, roomFilter, priceMin, priceMax, currency, sortOrder, selectedStatus, floorTypeFilter, bathroomsFilter, balconiesFilter, buildingStatusFilter, buildingConditionFilter, buildingTypeFilter]);
 
  // User uploaded listings subset helper
  const userListings = useMemo(() => {
@@ -520,7 +522,7 @@ export default function App() {
  }, [listings, favorites]);
 
  return (
- <div className="min-h-screen bg-[#F4F4F5] #0F0F12] flex flex-col justify-between" id="adjarahome-app">
+ <div className="min-h-screen bg-[#F4F4F5] flex flex-col justify-between" id="newlife-app">
   {/* Header bar component */}
   <Header
   activeTab={activeTab}
@@ -529,7 +531,7 @@ export default function App() {
    window.scrollTo({ top: 0, behavior: 'smooth' });
   }}
   favoritesCount={favorites.length}
-  unreadMessagesCount={0}
+  unreadMessagesCount={totalUnread}
   onAddListingClick={() => isAuthenticated ? setActiveTabWithUrl('add_property') : setShowAuthModal(true)}
   userAvatar={profile?.avatar_url || userProfile.avatar}
   isAuthenticated={isAuthenticated}
@@ -590,8 +592,8 @@ export default function App() {
        <button key={v} onClick={() => setSelectedType(v)}
        className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all cursor-pointer ${
         selectedType === v
-        ? 'bg-gray-900 text-white '
-        : 'text-gray-500 hover:text-gray-700 :text-gray-200 hover:bg-gray-50 :bg-gray-800'
+        ? 'bg-gray-900 text-white'
+        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
        }`}
        >{labels[v]}</button>
       );
@@ -609,7 +611,7 @@ export default function App() {
        className="w-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent"
       />
       {mainSearchBarQuery && (
-       <button onClick={() => setMainSearchBarQuery('')} className="text-gray-400 hover:text-gray-600 :text-gray-300 text-lg leading-none">×</button>
+       <button onClick={() => setMainSearchBarQuery('')} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
       )}
       </div>
 
@@ -617,7 +619,7 @@ export default function App() {
 
       <div className="relative">
       <button onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
-       className="h-full flex items-center gap-2 px-5 text-sm text-gray-700 hover:bg-gray-50 :bg-gray-800 cursor-pointer whitespace-nowrap transition-colors"
+       className="h-full flex items-center gap-2 px-5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap transition-colors"
       >
        <MapPin size={14} className="text-gray-400" />
        <span>{selectedCity === 'all' ? 'ყველა ქალაქი' : selectedCity}</span>
@@ -628,8 +630,8 @@ export default function App() {
        {[{ value: 'all', label: 'ყველა ქალაქი' }, ...GEORGIAN_LOCATIONS.popular.map(c => ({ value: c, label: c }))].map((opt) => (
         <button key={opt.value}
         onClick={() => { setSelectedCity(opt.value); setIsCityDropdownOpen(false); }}
-        className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 :bg-gray-800 cursor-pointer transition-colors ${
-         selectedCity === opt.value ? 'text-ss-primary font-semibold bg-violet-50 ' : 'text-gray-700 '
+        className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors ${
+         selectedCity === opt.value ? 'text-ss-primary font-semibold bg-purple-50' : 'text-gray-700'
         }`}
         >
         {opt.label}
@@ -670,7 +672,15 @@ export default function App() {
      cities={citiesList} districts={districtsList}
      priceMin={priceMin} setPriceMin={setPriceMin}
      priceMax={priceMax} setPriceMax={setPriceMax}
+     areaMin={areaMin} setAreaMin={setAreaMin}
+     areaMax={areaMax} setAreaMax={setAreaMax}
      selectedStatus={selectedStatus} setSelectedStatus={setSelectedStatus}
+     floorTypeFilter={floorTypeFilter} setFloorTypeFilter={setFloorTypeFilter}
+     bathroomsFilter={bathroomsFilter} setBathroomsFilter={setBathroomsFilter}
+     balconiesFilter={balconiesFilter} setBalconiesFilter={setBalconiesFilter}
+     buildingStatusFilter={buildingStatusFilter} setBuildingStatusFilter={setBuildingStatusFilter}
+     buildingConditionFilter={buildingConditionFilter} setBuildingConditionFilter={setBuildingConditionFilter}
+     buildingTypeFilter={buildingTypeFilter} setBuildingTypeFilter={setBuildingTypeFilter}
      searchHistory={searchHistory}
      onSearchHistorySelect={(item) => {
       if (item.filters.type) setSelectedType(item.filters.type as any);
@@ -726,15 +736,23 @@ export default function App() {
        <button
         onClick={() => setViewMode('grid')}
         className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-        viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700 :text-gray-200'
+        viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
         }`}
        >
         <LayoutGrid size={14} />
        </button>
        <button
+        onClick={() => setViewMode('list')}
+        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+        viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+        }`}
+       >
+        <List size={14} />
+       </button>
+       <button
         onClick={() => setViewMode('map')}
         className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-        viewMode === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700 :text-gray-200'
+        viewMode === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
         }`}
        >
         <Map size={14} />
@@ -758,6 +776,7 @@ export default function App() {
      </div>
      )}
 
+     {/* Grid view */}
      {viewMode === 'grid' && (
      filteredListings.length === 0 ? (
       <EmptyState
@@ -778,6 +797,37 @@ export default function App() {
        onCardClick={() => handleListingClick(listing.id)}
        isCompareSelected={compareListings.includes(listing.id)}
        onCompareToggle={toggleCompare}
+       viewMode="grid"
+       onQuickView={handleQuickView}
+       />
+      ))}
+      </div>
+     )
+     )}
+
+     {/* List view */}
+     {viewMode === 'list' && (
+     filteredListings.length === 0 ? (
+      <EmptyState
+      type="search"
+      actionLabel="ფილტრების გასუფთავება"
+      onAction={() => { setSelectedType('all'); setSearchArea(''); setMainSearchBarQuery(''); setSelectedCity('all'); setSelectedDistrict('all'); setRoomFilter('any'); setPriceMin(''); setPriceMax(''); setSelectedStatus('all'); }}
+      />
+     ) : (
+      <div className="flex flex-col gap-3">
+      {filteredListings.map((listing) => (
+       <ListingCard
+       key={listing.id}
+       listing={listing}
+       isFavorited={favorites.includes(listing.id)}
+       onFavoriteToggle={handleFavoriteToggle}
+       currency={currency}
+       exchangeRate={exchangeRate}
+       onCardClick={() => handleListingClick(listing.id)}
+       isCompareSelected={compareListings.includes(listing.id)}
+       onCompareToggle={toggleCompare}
+       viewMode="list"
+       onQuickView={handleQuickView}
        />
       ))}
       </div>
@@ -840,7 +890,8 @@ export default function App() {
    setPaymentCards={setPaymentCards}
    myListings={userListings}
    onAddListingClick={() => setIsAddModalOpen(true)}
-   onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
+   onDeleteListing={(id: string) => { deleteListing(id); }}
+   onUpdateListing={updateListing}
    currency={currency}
    />
   )}
@@ -877,6 +928,8 @@ export default function App() {
      onCardClick={() => handleListingClick(listing.id)}
      isCompareSelected={compareListings.includes(listing.id)}
      onCompareToggle={toggleCompare}
+     viewMode="grid"
+     onQuickView={handleQuickView}
      />
     ))}
     </div>
@@ -893,7 +946,7 @@ export default function App() {
   {activeTab === 'admin' && isAdmin && (
    <AdminPanel
    localListings={listings}
-   onDeleteListing={(id) => setListings(prev => prev.filter(l => l.id !== id))}
+   onDeleteListing={(id) => { refetchListings(); }}
    />
   )}
 
@@ -935,6 +988,19 @@ export default function App() {
   </motion.main>
   </AnimatePresence>
 
+  {/* Quick View Modal */}
+  <QuickViewModal
+  listing={listings.find((l) => l.id === quickViewListingId) || null}
+  isOpen={!!quickViewListingId}
+  onClose={closeQuickView}
+  onViewDetail={(id) => { closeQuickView(); handleListingClick(id); }}
+  currency={currency}
+  isFavorited={quickViewListingId ? favorites.includes(quickViewListingId) : false}
+  onFavoriteToggle={handleFavoriteToggle}
+  isCompareSelected={quickViewListingId ? compareListings.includes(quickViewListingId) : false}
+  onCompareToggle={toggleCompare}
+  />
+
   {/* Compare Drawer */}
   <CompareDrawer
   listings={compareListingsData}
@@ -960,12 +1026,13 @@ export default function App() {
   />
   )}
 
+  <BackToTop />
   <HelpWidget />
 
   <Footer
   onTermsClick={() => setActiveTab('terms')}
   onPrivacyClick={() => setActiveTab('privacy')}
-  onHelpClick={() => {}}
+  onHelpClick={() => window.dispatchEvent(new CustomEvent('open-help-widget'))}
   />
  </div>
  );

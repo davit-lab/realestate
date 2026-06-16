@@ -12,7 +12,7 @@ export const supabase = createClient(
       params: { eventsPerSecond: 10 },
     },
     auth: { autoRefreshToken: true, persistSession: true },
-    global: { headers: { 'x-client-info': 'adjarahome' } },
+    global: { headers: { 'x-client-info': 'newlife' } },
   }
 );
 

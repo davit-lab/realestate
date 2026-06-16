@@ -46,7 +46,7 @@ export default function Header({
   initial={{ y: -20, opacity: 0 }}
   animate={{ y: 0, opacity: 1 }}
   transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-  className="bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-40"
+  className="bg-white border-b border-gray-200 sticky top-0 z-40"
  >
   <div className="max-w-7xl mx-auto px-4 sm:px-6 h-[60px] flex items-center justify-between gap-4">
 
@@ -59,7 +59,7 @@ export default function Header({
    <Home size={15} className="text-white" strokeWidth={2.5} />
    </div>
    <span className="hidden sm:block text-[15px] font-black text-gray-900 tracking-tight">
-   adjara<span className="text-ss-primary">home</span>
+   newlife
    </span>
   </button>
 
@@ -75,7 +75,7 @@ export default function Header({
     whileTap={{ scale: 0.95 }}
     className={`relative flex items-center gap-2 cursor-pointer select-none transition-all duration-200 ${
      isActive
-     ? 'bg-ss-primary text-white px-4 py-2 rounded-full text-[13px] font-bold shadow-sm shadow-violet-200 '
+     ? 'bg-ss-primary text-white px-4 py-2 rounded-full text-[13px] font-bold shadow-sm'
      : 'text-gray-400 hover:text-gray-700 w-10 h-10 rounded-full hover:bg-gray-50 justify-center'
     }`}
     >

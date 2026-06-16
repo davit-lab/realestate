@@ -17,6 +17,16 @@ CREATE TABLE IF NOT EXISTS public.profile_verifications (
   reviewed_by   UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
+-- Make user_id unique so ON CONFLICT works for upserts
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'profile_verifications_user_id_unique'
+  ) THEN
+    ALTER TABLE public.profile_verifications ADD CONSTRAINT profile_verifications_user_id_unique UNIQUE (user_id);
+  END IF;
+END $$;
+
 ALTER TABLE public.profile_verifications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own verification read" ON public.profile_verifications;

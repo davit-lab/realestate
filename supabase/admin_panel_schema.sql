@@ -111,8 +111,8 @@ INSERT INTO public.site_settings (key, value, description) VALUES
   ('vip_price', '5', 'VIP ფასი GEL-ში'),
   ('vip_plus_price', '10', 'VIP+ ფასი GEL-ში'),
   ('super_vip_price', '25', 'Super VIP ფასი GEL-ში'),
-  ('site_title', 'Adjarahome.ge', 'საიტის სათაური'),
-  ('meta_description', 'უძრავი ქონება საქართველოში — Adjarahome.ge', 'Meta აღწერა')
+  ('site_title', 'Newlife.ge', 'საიტის სათაური'),
+  ('meta_description', 'უძრავი ქონება საქართველოში — Newlife.ge', 'Meta აღწერა')
 ON CONFLICT (key) DO NOTHING;
 
 -- 6. Announcements

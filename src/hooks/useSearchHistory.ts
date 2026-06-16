@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'adjarahome_search_history';
+const STORAGE_KEY = 'newlife_search_history';
 const MAX_ITEMS = 10;
 
 export interface SearchHistoryItem {

@@ -138,13 +138,13 @@ export default function ChatWindow({
  const grouped = groupByDate(messages);
 
  return (
- <div className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden bg-gradient-to-br from-white to-gray-50">
+ <div className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden bg-white">
   {/* Header */}
-  <header className="shrink-0 glass-panel-strong border-b border-gray-100/80 px-5 py-3.5 flex items-center gap-3 z-20">
+  <header className="shrink-0 bg-white border-b border-gray-200 px-5 py-3.5 flex items-center gap-3 z-20">
   {onBack && (
    <button
    onClick={onBack}
-   className="p-2 -ml-2 rounded-full hover:bg-purple-50 transition-colors cursor-pointer"
+   className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
    >
    <ChevronLeft size={22} className="text-gray-700" />
    </button>
@@ -153,7 +153,7 @@ export default function ChatWindow({
    <img
    src={agentAvatar || '/avatar-placeholder.png'}
    alt={agentName}
-   className="w-11 h-11 rounded-full object-cover ring-2 ring-purple-100 shadow-sm"
+   className="w-11 h-11 rounded-full object-cover ring-2 ring-gray-200 shadow-sm"
    />
    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
   </div>
@@ -161,18 +161,18 @@ export default function ChatWindow({
    <h2 className="text-[15px] font-bold text-gray-900 truncate leading-tight">
    {agentName}
    </h2>
-   <p className="text-[11px] text-purple-500 font-medium">
+   <p className="text-[11px] text-gray-500 font-medium">
    {isTyping ? 'წერს...' : 'ონლაინ'}
    </p>
   </div>
   <div className="flex items-center gap-1">
-   <button className="p-2.5 rounded-full hover:bg-purple-50 text-gray-500 hover:text-purple-600 transition-colors cursor-pointer">
+   <button className="p-2.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
    <Phone size={18} />
    </button>
-   <button className="p-2.5 rounded-full hover:bg-purple-50 text-gray-500 hover:text-purple-600 transition-colors cursor-pointer">
+   <button className="p-2.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
    <Video size={18} />
    </button>
-   <button className="p-2.5 rounded-full hover:bg-purple-50 text-gray-500 hover:text-purple-600 transition-colors cursor-pointer">
+   <button className="p-2.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
    <MoreHorizontal size={18} />
    </button>
   </div>
@@ -182,7 +182,7 @@ export default function ChatWindow({
   <main className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-5 space-y-1 scroll-smooth">
   {isLoading && messages.length === 0 && (
    <div className="flex items-center justify-center h-full">
-   <div className="w-8 h-8 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+   <div className="w-8 h-8 border-2 border-gray-200 border-t-ss-primary rounded-full animate-spin" />
    </div>
   )}
 
@@ -234,7 +234,7 @@ export default function ChatWindow({
   <div className="shrink-0 px-5 py-2 bg-white border-t border-gray-100">
    <div className="flex items-center gap-3">
    <div className="relative">
-    <img src={imagePreview} alt="Preview" className="h-14 rounded-xl object-cover border border-purple-200" />
+    <img src={imagePreview} alt="Preview" className="h-14 rounded-xl object-cover border border-gray-200" />
     <button
     onClick={() => setImagePreview(null)}
     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-700 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors cursor-pointer"
@@ -250,7 +250,7 @@ export default function ChatWindow({
   {/* Input Bar */}
   <form
   onSubmit={handleSend}
-  className="shrink-0 glass-panel-strong border-t border-gray-100/80 px-5 py-3.5 z-20"
+  className="shrink-0 bg-white border-t border-gray-200 px-5 py-3.5 z-20"
   >
   <div className="flex items-end gap-2.5 max-w-3xl mx-auto">
    <ImageUploadButton
@@ -274,7 +274,7 @@ export default function ChatWindow({
     }
     }}
     placeholder="შეტყობინება..."
-    className="w-full bg-white/80 border border-gray-100 rounded-[24px] py-3 px-5 text-[15px] text-gray-900 placeholder-gray-400 outline-none resize-none max-h-[120px] focus:bg-white focus:shadow-md focus:shadow-purple-100/50 focus:border-purple-200 transition-all duration-200"
+    className="w-full bg-gray-50 border border-gray-200 rounded-[24px] py-3 px-5 text-[15px] text-gray-900 placeholder-gray-400 outline-none resize-none max-h-[120px] focus:bg-white focus:border-ss-primary transition-all duration-200"
     style={{ minHeight: '48px' }}
    />
    </div>
@@ -285,7 +285,7 @@ export default function ChatWindow({
    whileTap={{ scale: 0.92 }}
    className={`p-3.5 rounded-full transition-all duration-200 cursor-pointer shrink-0 ${
     (input.trim() || imagePreview) && !sending && !uploadingImage
-    ? 'bg-gradient-to-br from-ss-primary to-ss-primary-dark text-white shadow-md shadow-purple-500/20'
+    ? 'bg-ss-primary text-white shadow-sm'
     : 'bg-gray-100 text-gray-300'
    }`}
    >

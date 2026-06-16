@@ -51,6 +51,14 @@ export interface Listing {
   viewCount?: number; // Number of unique views
   user_id?: string; // Auth user id who created the listing
   property_type?: string; // apartment, house, land, commercial, hotel, cottage
+  kitchen_area_sqm?: number;
+  floor_type?: string;
+  balconies?: number;
+  bathrooms?: number;
+  building_status?: string;
+  building_type?: string;
+  building_condition?: string;
+  additional_info?: string[];
 }
 
 export interface PaymentCard {
@@ -67,7 +75,7 @@ export type ActiveTab = 'explore' | 'detail' | 'profile' | 'favorites' | 'messag
 export type ProfileSubTab = 'balance_view' | 'balance_refill' | 'payment_methods' | 'my_listings';
 
 // ── Admin Panel Types ──
-export type AdminSubTab = 'dashboard' | 'listings' | 'users' | 'transactions' | 'packages' | 'chats' | 'support' | 'templates' | 'site' | 'payments';
+export type AdminSubTab = 'dashboard' | 'listings' | 'users' | 'transactions' | 'packages' | 'chats' | 'support' | 'templates' | 'site' | 'payments' | 'services' | 'verifications';
 
 export type PaymentProviderType = 'bog_ipay' | 'flitt' | 'tbc_opay' | 'other';
 
@@ -157,6 +165,8 @@ export interface AdminUserExtended {
   balance: number;
   is_admin: boolean;
   is_agent: boolean;
+  is_verified?: boolean;
+  verification_status?: string;
   created_at: string;
   last_sign_in_at?: string;
   user_created_at?: string;
